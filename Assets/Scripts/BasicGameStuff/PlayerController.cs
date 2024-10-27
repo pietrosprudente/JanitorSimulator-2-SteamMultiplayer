@@ -72,7 +72,6 @@ namespace BasicGameStuff
 
             HandleGrabbing();
             ApplyVelocity();
-
         }
 
         private void Jump()
@@ -94,23 +93,33 @@ namespace BasicGameStuff
 
             Crosshair.CrosshairColor = lookingAtItem ? Color.red : Color.white;
 
-            if (Input.GetMouseButtonDown(0) && lookingAtItem)
+            if (Input.GetMouseButtonDown(0))
             {
-                var collider = hit.collider.gameObject;
-                if (!collider.GetComponent<PickUpItem>() || !collider.TryGetComponent(out grabbedBody)) return;
-                grabbedBodyLayer = grabbedBody.gameObject.layer;
-            }
+                if (IsGrabbing)
+                {
+                    grabbedBody = null;
+                    return;
+                }
 
-            else if (Input.GetMouseButtonUp(0) && IsGrabbing)
-            {
-                grabbedBody = null;
+                else if (lookingAtItem && !IsGrabbing)
+                {
+                    var collider = hit.collider.gameObject;
+
+                    if (!collider.GetComponent<PickUpItem>() || !collider.TryGetComponent(out grabbedBody))
+                        return;
+
+                    grabbedBodyLayer = grabbedBody.gameObject.layer;
+                }
             }
         }
 
+        private float speedPercentage = 1;
+
         private void Move(Vector3 direction)
         {
-            float moveSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintMultiplier : 1f);
-            moveSpeed = moveSpeed * (Input.GetKey(KeyCode.LeftControl) ? 0.5f : 1f);
+            float sprintSpeed = speed * (Input.GetKey(KeyCode.LeftShift) ? sprintMultiplier : 1f);
+            float crouchSpeed = sprintSpeed * (Input.GetKey(KeyCode.LeftControl) ? 0.5f : 1f);
+            float moveSpeed = crouchSpeed * speedPercentage;
 
             Vector3 forward = camPivot.transform.forward;
             Vector3 right = camPivot.transform.right;
@@ -150,11 +159,22 @@ namespace BasicGameStuff
 
         private void HandleGrabbing()
         {
-            if (!IsGrabbing) return;
+            if (!IsGrabbing)
+            {
+                speedPercentage = 1;
+                return;
+            }
 
             Vector3 distance = grabPosObject.transform.position - grabbedBody.position;
             grabbedBody.linearVelocity = distance * grabSpeed;
             grabbedBody.angularVelocity = Vector3.zero;
+
+            if (grabbedBody.GetComponent<TrashItem>() != null)
+            {
+                speedPercentage = grabbedBody.GetComponent<TrashItem>().moveSpeedPercentage / 100;
+            }
+
+            speedPercentage = Mathf.Clamp(speedPercentage, 0, 1);
 
             if (grabbedBody.GetComponent<PickUpItem>().lookAtPlayer)
             {
