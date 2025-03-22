@@ -1,6 +1,7 @@
+using FishNet.Object;
 using UnityEngine;
 
 public class Hallway : MonoBehaviour
 {
-    public GameObject door;
+    public NetworkObject door;
 }

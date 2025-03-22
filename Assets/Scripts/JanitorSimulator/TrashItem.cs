@@ -1,4 +1,5 @@
 using BasicGameStuff;
+using FishNet.Component.Transforming;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -9,20 +10,11 @@ public class TrashItem : PickUpItem
     public float moveSpeedPercentage = 100;
     public int moneyWorth = 3;
 
-    private Rigidbody rb;
-
     private void OnDestroy()
     {
         if(!ShiftManager.isFreePlay)
         {
             EconomySystem.MoneyBux += moneyWorth;
         }
-    }
-
-    private void Start()
-    {
-        rb = GetComponent<Rigidbody>();
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
     }
 }

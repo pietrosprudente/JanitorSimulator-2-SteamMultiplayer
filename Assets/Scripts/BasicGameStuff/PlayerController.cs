@@ -1,8 +1,14 @@
+using FishNet.Connection;
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
+using Steamworks;
+using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace BasicGameStuff
 {
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : NetworkBehaviour
     {
         public static PlayerController Instance { get; private set; }
 
@@ -19,6 +25,8 @@ namespace BasicGameStuff
         [Header("Assigns")]
         public GameObject camPivot;
         public GameObject cameraObject;
+        public Transform tpsPos;
+        public Camera myCamera;
         public GameObject grabPosObject;
 
         [Header("Player Settings")]
@@ -43,17 +51,125 @@ namespace BasicGameStuff
         private Rigidbody rb;
         private Vector3 velocity;
 
+        public readonly SyncVar<string> nickname = new();
+        public readonly SyncVar<CSteamID> steamID = new();
+        public TMP_Text nicknameTMP;
+        public Renderer face;
+        public GameObject broomObject;
+
         private bool IsGrabbing => grabbedBody != null;
 
-        private void Start()
+        public override void OnStartClient()
         {
             rb = GetComponent<Rigidbody>();
+            if (!IsOwner) {
+                Destroy(myCamera.gameObject);
+                return;
+            }
             Instance = this;
             MouseCaptured = true;
+            SetupSteamPlayer(SteamManager.Initialized ? SteamFriends.GetPersonaName() : "Player " + Random.Range(1111, 9999), SteamUser.GetSteamID());
         }
+
+        private GameObject spawnedBroom;
+
+        [ServerRpc]
+        private void SetupSteamPlayer(string newName, CSteamID newID)
+        {
+            nickname.Value = newName;
+            steamID.Value = newID;
+            var broom = Instantiate(broomObject, transform.position, Quaternion.identity);
+            Spawn(broom, Owner);
+            spawnedBroom = broom.transform.GetChild(0).gameObject;
+        }
+
+        [ServerRpc]
+        private void RetrieveStupidBroom()
+        {
+            spawnedBroom.GetComponentInParent<NetworkObject>().GiveOwnership(Owner);
+            spawnedBroom.TryGetComponent(out Rigidbody rb);
+            rb.isKinematic = true;
+            rb.transform.position = transform.position;
+            rb.transform.rotation = Quaternion.identity;
+            rb.isKinematic = false;
+            rb.position = this.rb.position;
+            rb.rotation = Quaternion.identity;
+        }
+
+        public static Texture2D GetSteamImageAsTexture2D(int iImage)
+        {
+            Texture2D ret = null;
+            uint ImageWidth;
+            uint ImageHeight;
+            bool bIsValid = SteamUtils.GetImageSize(iImage, out ImageWidth, out ImageHeight);
+
+            if (bIsValid)
+            {
+                byte[] Image = new byte[ImageWidth * ImageHeight * 4];
+
+                bIsValid = SteamUtils.GetImageRGBA(iImage, Image, (int)(ImageWidth * ImageHeight * 4));
+                if (bIsValid)
+                {
+                    ret = new Texture2D((int)ImageWidth, (int)ImageHeight, TextureFormat.RGBA32, false, true);
+                    ret.LoadRawTextureData(Image);
+                    ret.Apply();
+                }
+            }
+
+            return ret;
+        }
+
+        public readonly SyncVar<bool> canPush = new(true);
+
+        [ServerRpc]
+        public void Push()
+        {
+            if (!canPush.Value) return;
+            canPush.Value = false;
+            Invoke(nameof(ResetCanPush), 0.6f);
+            Ray ray = new()
+            {
+                origin = cameraObject.transform.position,
+                direction = cameraObject.transform.forward,
+            };
+            bool hasHit = Physics.Raycast(ray, out RaycastHit hit, 5f, Physics.AllLayers, QueryTriggerInteraction.Ignore);
+            if (hasHit)
+            {
+                Vector3 force = -hit.normal * 2;
+                hit.rigidbody?.AddForce(force);
+                hit.collider.TryGetComponent(out PlayerController controller);
+                if (controller)
+                {
+                    controller.PlayerPush(controller.Owner, force);
+                }
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void ResetCanPush()
+        {
+            canPush.Value = false;
+        }
+
+        [TargetRpc]
+        public void PlayerPush(NetworkConnection conn, Vector3 force)
+        {
+            if(conn == Owner)
+            rb.AddForce(force);
+        }
+
+        public bool tps = false;
 
         private void Update()
         {
+            nicknameTMP.text = nickname.Value;
+            if (face.material.mainTexture != GetSteamImageAsTexture2D(SteamFriends.GetLargeFriendAvatar(steamID.Value)))
+            {
+                face.material.mainTexture = GetSteamImageAsTexture2D(SteamFriends.GetLargeFriendAvatar(steamID.Value));
+            }
+            if (!IsOwner) return;
+            myCamera.transform.position = tps ? tpsPos.position : cameraObject.transform.position;
+            myCamera.transform.rotation = tps ? tpsPos.rotation : cameraObject.transform.rotation;
             velocity = rb.linearVelocity;
             rb.angularVelocity = Vector3.zero;
 
@@ -61,7 +177,7 @@ namespace BasicGameStuff
             {
                 MouseCaptured = !MouseCaptured;
                 PauseMenu.Instance.gameObject.SetActive(!MouseCaptured);
-                Time.timeScale = MouseCaptured ? 1f : 0f;
+                //Time.timeScale = MouseCaptured ? 1f : 0f;
             }
 
             if (MouseCaptured)
@@ -88,15 +204,25 @@ namespace BasicGameStuff
             Vector3 direction = (transform.rotation * new Vector3(inputDir.x, 0, inputDir.y)).normalized;
             Move(direction);
             Jump();
+            if (Input.GetKeyDown(KeyCode.Q))
+            {
+                RetrieveStupidBroom();
+            }
+
+            if (Input.GetKeyDown(KeyCode.G))
+            {
+                tps = !tps;
+            }
 
             var lookingAtItem = Physics.Raycast(cameraObject.transform.position, cameraObject.transform.forward, out var hit, 5f, pickupMask);
 
-            Crosshair.CrosshairColor = lookingAtItem ? Color.red : Color.white;
+            Crosshair.CrosshairColor = lookingAtItem ? Color.green : Color.red;
 
             if (Input.GetMouseButtonDown(0))
             {
                 if (IsGrabbing)
                 {
+                    grabbedBody.GetComponent<PickUpItem>().DropItem();
                     grabbedBody = null;
                     return;
                 }
@@ -105,9 +231,10 @@ namespace BasicGameStuff
                 {
                     var collider = hit.collider.gameObject;
 
-                    if (!collider.GetComponent<PickUpItem>() || !collider.TryGetComponent(out grabbedBody))
+                    if (!collider.TryGetComponent(out grabbedBody))
                         return;
 
+                    grabbedBody.GetComponent<PickUpItem>().GrabItem(LocalConnection);
                     grabbedBodyLayer = grabbedBody.gameObject.layer;
                 }
             }

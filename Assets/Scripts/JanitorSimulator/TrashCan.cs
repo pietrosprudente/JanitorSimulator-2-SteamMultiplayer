@@ -1,13 +1,14 @@
+using FishNet.Object;
 using UnityEngine;
 
-public class TrashCan : MonoBehaviour
+public class TrashCan : NetworkBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
-        if(other.GetComponent<TrashItem>())
+        if (other.GetComponent<TrashItem>() && IsServer)
         {
-            Destroy(other.gameObject);
-            HallwayGenerator.Instance.TrashAmount--;
+            Despawn(other.gameObject);
+            HallwayGenerator.UpdateHallway();
         }
     }
 }

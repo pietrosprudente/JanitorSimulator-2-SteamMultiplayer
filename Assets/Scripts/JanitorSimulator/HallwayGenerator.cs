@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
 using UnityEngine;
 
-public class HallwayGenerator : MonoBehaviour
+public class HallwayGenerator : NetworkBehaviour
 {
     public static HallwayGenerator Instance { get; private set; }
 
@@ -16,7 +18,7 @@ public class HallwayGenerator : MonoBehaviour
     private int trashIncrement = 1;
     private Hallway1 currentHallway;
     private uint hallwaysUntilNext;
-    private List<GameObject> trashList = new List<GameObject>();
+    private readonly SyncList<GameObject> trashList = new ();
 
     private uint HallwaysUntilNext
     {
@@ -43,15 +45,18 @@ public class HallwayGenerator : MonoBehaviour
         set
         {
             trashAmount = value;
+            /*
             if (trashAmount <= 0)
             {
                 GenerateNewHallway();
-            }
+            }*/
         }
     }
 
-    public void Start()
+    public override void OnStartClient()
     {
+        base.OnStartClient();
+        if (!IsServer) { this.enabled = false; return; }
         Instance = this;
 
         currentHallway = hallways[0];
@@ -60,26 +65,43 @@ public class HallwayGenerator : MonoBehaviour
         GenerateStartHallway();
     }
 
+    public static void UpdateHallway()
+    {
+        Instance.UpdateHallwayRPC();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void UpdateHallwayRPC()
+    {
+        Instance.TrashAmount--;
+        if (Instance.trashAmount <= 0)
+        {
+            Instance.GenerateNewHallway();
+        }
+    }
+
+    [ServerRpc]
     public void GenerateNewHallway()
     {
         HallwaysUntilNext--;
         print(trashAmount);
 
-        GameObject door = currentHallwayObj.GetComponent<Hallway>().door;
+        GameObject door = currentHallwayObj.GetComponent<Hallway>().door.gameObject;
         if (door != null)
         {
-            Destroy(door);
+            Despawn(door);
         }
 
         var pos = currentHallwayObj.transform.position + hallwayOffset;
-        currentHallwayObj = Instantiate(currentHallway.prefab);
-        currentHallwayObj.transform.position = pos;
+        currentHallwayObj = Instantiate(currentHallway.prefab, pos, currentHallway.prefab.transform.rotation);
+        Spawn(currentHallwayObj);
 
         _trashAmount += trashIncrement;
         trashAmount += _trashAmount;
         GenerateTrash(trashAmount);
     }
 
+    [ServerRpc]
     public void GenerateStartHallway()
     {
         HallwaysUntilNext--;
@@ -87,19 +109,22 @@ public class HallwayGenerator : MonoBehaviour
         GenerateTrash(trashAmount);
     }
 
+    [ServerRpc]
     private void GenerateTrash(int amount)
     {
         trashList.Clear();
 
         for (int i = 0; i < amount; i++)
         {
-            var prefab = trashPrefabs[Random.Range(0, trashPrefabs.Count)];
-            var trashInstance = Instantiate(prefab);
-
-            trashInstance.transform.position = currentHallwayObj.transform.position + new Vector3(
+            Vector3 generatedPos = currentHallwayObj.transform.position + new Vector3(
                 (Random.value - 0.5f) * 2 * trashBounds.x,
                 0,
                 (Random.value - 0.5f) * 2 * trashBounds.z);
+
+            GameObject prefab = trashPrefabs[Random.Range(0, trashPrefabs.Count)];
+            GameObject trashInstance = Instantiate(prefab, generatedPos, Quaternion.identity);
+            Spawn(trashInstance, LocalConnection);
+
             trashList.Add(trashInstance);
         }
     }
