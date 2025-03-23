@@ -9,13 +9,13 @@ namespace BasicGameStuff
     public class PickUpItem : NetworkBehaviour
     {
         public bool lookAtPlayer = false;
-        public readonly SyncVar<bool> isGrabbed = new(false);
 
         [HideInInspector] public Rigidbody rb;
 
         public override void OnStartClient()
         {
             base.OnStartClient();
+            if(IsServer) NetworkObject.GiveOwnership(LocalConnection);
             rb = GetComponent<Rigidbody>();
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
@@ -25,16 +25,13 @@ namespace BasicGameStuff
         [ServerRpc(RequireOwnership = false)]
         public void GrabItem(NetworkConnection conn)
         {
-            if (isGrabbed.Value && !IsOwner) return;
             NetworkObject.GiveOwnership(conn);
-            isGrabbed.Value = true;
         }
 
         [ServerRpc(RequireOwnership = false)]
         public void DropItem()
         {
-            if (!isGrabbed.Value) return;
-            isGrabbed.Value = false;
+            rb.AddForce(Vector3.up * 1.2f);
         }
     }
 }

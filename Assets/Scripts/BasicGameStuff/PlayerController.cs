@@ -3,7 +3,6 @@ using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using Steamworks;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace BasicGameStuff
@@ -167,6 +166,7 @@ namespace BasicGameStuff
             {
                 face.material.mainTexture = GetSteamImageAsTexture2D(SteamFriends.GetLargeFriendAvatar(steamID.Value));
             }
+            rb.isKinematic = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex != 1;
             if (!IsOwner) return;
             myCamera.transform.position = tps ? tpsPos.position : cameraObject.transform.position;
             myCamera.transform.rotation = tps ? tpsPos.rotation : cameraObject.transform.rotation;

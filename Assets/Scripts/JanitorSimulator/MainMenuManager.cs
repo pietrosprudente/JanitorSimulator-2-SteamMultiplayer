@@ -1,4 +1,5 @@
 using BasicGameStuff;
+using Steamworks;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -20,7 +21,7 @@ public class MainMenuManager : MonoBehaviour
 
         statsText.text = $"Muns: {EconomySystem.MoneyBux}\nShifts: {SaveLoadSystem.GameSave.shifts}";
 
-        foreach(var value in SaveLoadSystem.GameSave.unlockedGadgets)
+        foreach (var value in SaveLoadSystem.GameSave.unlockedGadgets)
         {
             unlockedGadgets.Add(allGadgets[value]);
         }
@@ -35,7 +36,7 @@ public class MainMenuManager : MonoBehaviour
 
     public void BuyGadget(GameObject gadget)
     {
-        if(EconomySystem.MoneyBux >= price)
+        if (EconomySystem.MoneyBux >= price)
         {
             unlockedGadgets.Add(gadget);
 
@@ -55,6 +56,16 @@ public class MainMenuManager : MonoBehaviour
 
     public void StartShit()
     {
-        SceneManager.LoadScene(1);
+        Game.CreateLobby();
+    }
+
+    public void JoinById(string id)
+    {
+        if (ulong.TryParse(id, out ulong result))
+            Game.JoinByID(new(result));
+        else
+        {
+            Debug.LogError("Could not join Lobby");
+        }
     }
 }

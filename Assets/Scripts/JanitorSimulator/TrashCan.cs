@@ -7,7 +7,7 @@ public class TrashCan : NetworkBehaviour
     {
         if (other.GetComponent<TrashItem>() && IsServer)
         {
-            Despawn(other.gameObject);
+            Despawn(other.gameObject, DespawnType.Destroy);
             HallwayGenerator.UpdateHallway();
         }
     }

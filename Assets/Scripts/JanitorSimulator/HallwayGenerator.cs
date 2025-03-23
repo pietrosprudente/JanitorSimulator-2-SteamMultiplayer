@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FishNet.CodeGenerating;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
@@ -7,10 +8,10 @@ public class HallwayGenerator : NetworkBehaviour
 {
     public static HallwayGenerator Instance { get; private set; }
 
-    public List<Hallway1> hallways;
+    public HallListScript hallListRef;
     public Vector3 hallwayOffset;
     public GameObject currentHallwayObj;
-    public List<GameObject> trashPrefabs;
+    public TrashListScript trashListRef;
     public Vector3 trashBounds = new Vector3(10, 0, 10);
 
     private int trashAmount = 2;
@@ -18,7 +19,9 @@ public class HallwayGenerator : NetworkBehaviour
     private int trashIncrement = 1;
     private Hallway1 currentHallway;
     private uint hallwaysUntilNext;
-    private readonly SyncList<GameObject> trashList = new ();
+
+    [AllowMutableSyncType]
+    public SyncList<GameObject> trashList = new();
 
     private uint HallwaysUntilNext
     {
@@ -32,8 +35,8 @@ public class HallwayGenerator : NetworkBehaviour
 
             if(hallwaysUntilNext <= 0)
             {
-                var index = hallways.IndexOf(currentHallway) + 1;
-                currentHallway = hallways[index >= hallways.Count ? 0 : index];
+                var index = hallListRef.hallways.IndexOf(currentHallway) + 1;
+                currentHallway = hallListRef.hallways[index >= hallListRef.hallways.Count ? 0 : index];
                 hallwaysUntilNext = currentHallway.length;
             }
         }
@@ -53,13 +56,12 @@ public class HallwayGenerator : NetworkBehaviour
         }
     }
 
-    public override void OnStartClient()
+    private void Start()
     {
-        base.OnStartClient();
         if (!IsServer) { this.enabled = false; return; }
         Instance = this;
 
-        currentHallway = hallways[0];
+        currentHallway = hallListRef.hallways[0];
         hallwaysUntilNext = currentHallway.length;
 
         GenerateStartHallway();
@@ -80,7 +82,7 @@ public class HallwayGenerator : NetworkBehaviour
         }
     }
 
-    [ServerRpc]
+    [Server]
     public void GenerateNewHallway()
     {
         HallwaysUntilNext--;
@@ -101,7 +103,7 @@ public class HallwayGenerator : NetworkBehaviour
         GenerateTrash(trashAmount);
     }
 
-    [ServerRpc]
+    [Server]
     public void GenerateStartHallway()
     {
         HallwaysUntilNext--;
@@ -109,7 +111,7 @@ public class HallwayGenerator : NetworkBehaviour
         GenerateTrash(trashAmount);
     }
 
-    [ServerRpc]
+    [Server]
     private void GenerateTrash(int amount)
     {
         trashList.Clear();
@@ -121,11 +123,11 @@ public class HallwayGenerator : NetworkBehaviour
                 0,
                 (Random.value - 0.5f) * 2 * trashBounds.z);
 
-            GameObject prefab = trashPrefabs[Random.Range(0, trashPrefabs.Count)];
-            GameObject trashInstance = Instantiate(prefab, generatedPos, Quaternion.identity);
+            var prefab = trashListRef.trashPrefabs[Random.Range(0, trashListRef.trashPrefabs.Count)];
+            var trashInstance = Instantiate(prefab, generatedPos, Quaternion.identity);
             Spawn(trashInstance, LocalConnection);
 
-            trashList.Add(trashInstance);
+            trashList.Add(trashInstance.gameObject);
         }
     }
 }
