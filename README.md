@@ -1,1 +1,1 @@
-it uses spacewar :D
+it uses spacewar app id, can be swapped :D
