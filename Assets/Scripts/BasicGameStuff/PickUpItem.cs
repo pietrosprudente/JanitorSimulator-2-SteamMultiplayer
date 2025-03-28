@@ -2,6 +2,7 @@ using FishNet.Component.Transforming;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using Steamworks.Data;
 using UnityEngine;
 
 namespace BasicGameStuff
@@ -15,7 +16,6 @@ namespace BasicGameStuff
         public override void OnStartClient()
         {
             base.OnStartClient();
-            if(IsServer) NetworkObject.GiveOwnership(LocalConnection);
             rb = GetComponent<Rigidbody>();
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;

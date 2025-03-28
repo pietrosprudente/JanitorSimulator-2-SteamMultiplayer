@@ -62,7 +62,7 @@ public class MainMenuManager : MonoBehaviour
     public void JoinById(string id)
     {
         if (ulong.TryParse(id, out ulong result))
-            Game.JoinByID(new(result));
+            Game.JoinByID(new(){Value = result});
         else
         {
             Debug.LogError("Could not join Lobby");

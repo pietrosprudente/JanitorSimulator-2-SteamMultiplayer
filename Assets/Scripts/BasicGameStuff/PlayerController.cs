@@ -1,9 +1,14 @@
+using System;
+using System.Threading.Tasks;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using Steamworks;
+using Steamworks.Data;
 using TMPro;
 using UnityEngine;
+using Random = UnityEngine.Random;
+using Color = UnityEngine.Color;
 
 namespace BasicGameStuff
 {
@@ -51,7 +56,7 @@ namespace BasicGameStuff
         private Vector3 velocity;
 
         public readonly SyncVar<string> nickname = new();
-        public readonly SyncVar<CSteamID> steamID = new();
+        public readonly SyncVar<SteamId> steamID = new();
         public TMP_Text nicknameTMP;
         public Renderer face;
         public GameObject broomObject;
@@ -67,13 +72,13 @@ namespace BasicGameStuff
             }
             Instance = this;
             MouseCaptured = true;
-            SetupSteamPlayer(SteamManager.Initialized ? SteamFriends.GetPersonaName() : "Player " + Random.Range(1111, 9999), SteamUser.GetSteamID());
+            SetupSteamPlayer(SteamClient.IsLoggedOn ? SteamClient.Name : "Player " + Random.Range(1111, 9999), SteamClient.SteamId);
         }
 
         private GameObject spawnedBroom;
 
         [ServerRpc]
-        private void SetupSteamPlayer(string newName, CSteamID newID)
+        private void SetupSteamPlayer(string newName, SteamId newID)
         {
             nickname.Value = newName;
             steamID.Value = newID;
@@ -82,10 +87,10 @@ namespace BasicGameStuff
             spawnedBroom = broom.transform.GetChild(0).gameObject;
         }
 
-        [ServerRpc]
+        [ServerRpc(RequireOwnership = false, RunLocally = true)]
         private void RetrieveStupidBroom()
         {
-            spawnedBroom.GetComponentInParent<NetworkObject>().GiveOwnership(Owner);
+            spawnedBroom.GetComponent<PickUpItem>().NetworkObject.GiveOwnership(this.Owner);
             spawnedBroom.TryGetComponent(out Rigidbody rb);
             rb.isKinematic = true;
             rb.transform.position = transform.position;
@@ -93,29 +98,6 @@ namespace BasicGameStuff
             rb.isKinematic = false;
             rb.position = this.rb.position;
             rb.rotation = Quaternion.identity;
-        }
-
-        public static Texture2D GetSteamImageAsTexture2D(int iImage)
-        {
-            Texture2D ret = null;
-            uint ImageWidth;
-            uint ImageHeight;
-            bool bIsValid = SteamUtils.GetImageSize(iImage, out ImageWidth, out ImageHeight);
-
-            if (bIsValid)
-            {
-                byte[] Image = new byte[ImageWidth * ImageHeight * 4];
-
-                bIsValid = SteamUtils.GetImageRGBA(iImage, Image, (int)(ImageWidth * ImageHeight * 4));
-                if (bIsValid)
-                {
-                    ret = new Texture2D((int)ImageWidth, (int)ImageHeight, TextureFormat.RGBA32, false, true);
-                    ret.LoadRawTextureData(Image);
-                    ret.Apply();
-                }
-            }
-
-            return ret;
         }
 
         public readonly SyncVar<bool> canPush = new(true);
@@ -158,16 +140,51 @@ namespace BasicGameStuff
         }
 
         public bool tps = false;
+        
+        
+        private async Task<Image?> GetAvatar()
+        {
+            try
+            {
+                // Get Avatar using await
+                return await SteamFriends.GetLargeAvatarAsync(steamID.Value);
+            }
+            catch ( Exception e )
+            {
+                // If something goes wrong, log it
+                print(e);
+                return null;
+            }
+        }
+        
+        private Texture2D ConvertToTexture2D(Image image)
+        {
+            // Create a new Texture2D
+            var avatar = new Texture2D( (int)image.Width, (int)image.Height, TextureFormat.ARGB32, false );
+	
+            // Set filter type, or else its really blury
+            avatar.filterMode = FilterMode.Trilinear;
 
+            // Flip image
+            for ( int x = 0; x < image.Width; x++ )
+            {
+                for ( int y = 0; y < image.Height; y++ )
+                {
+                    var p = image.GetPixel( x, y );
+                    avatar.SetPixel( x, (int)image.Height - y, new UnityEngine.Color( p.r / 255.0f, p.g / 255.0f, p.b / 255.0f, p.a / 255.0f ) );
+                }
+            }
+	
+            avatar.Apply();
+            return avatar;
+        }
+        
         private void Update()
         {
             nicknameTMP.text = nickname.Value;
-            if (face.material.mainTexture != GetSteamImageAsTexture2D(SteamFriends.GetLargeFriendAvatar(steamID.Value)))
-            {
-                face.material.mainTexture = GetSteamImageAsTexture2D(SteamFriends.GetLargeFriendAvatar(steamID.Value));
-            }
-            rb.isKinematic = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex != 1;
+            UpdatePlayerAvatar();
             if (!IsOwner) return;
+            rb.isKinematic = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex != 1;
             myCamera.transform.position = tps ? tpsPos.position : cameraObject.transform.position;
             myCamera.transform.rotation = tps ? tpsPos.rotation : cameraObject.transform.rotation;
             velocity = rb.linearVelocity;
@@ -188,6 +205,16 @@ namespace BasicGameStuff
 
             HandleGrabbing();
             ApplyVelocity();
+        }
+
+        private async Task UpdatePlayerAvatar()
+        {
+            var avatar = await GetAvatar();
+            if(avatar == null) return;
+            if (face.material.mainTexture != ConvertToTexture2D(avatar.Value));
+            {
+                face.material.mainTexture = ConvertToTexture2D(avatar.Value);
+            }
         }
 
         private void Jump()

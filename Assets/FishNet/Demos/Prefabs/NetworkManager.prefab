@@ -11,9 +11,8 @@ GameObject:
   - component: {fileID: 7443408887813606049}
   - component: {fileID: 7443408887813606050}
   - component: {fileID: 934570884}
-  - component: {fileID: 268959197400785590}
   - component: {fileID: 602208854296968731}
-  - component: {fileID: 7995409823871612448}
+  - component: {fileID: 6307317488061038283}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -73,23 +72,6 @@ MonoBehaviour:
   _maximumTimedObserversDuration: 10
   _defaultConditions:
   - {fileID: 11400000, guid: 2033f54fd2794464bae08fa5a55c8996, type: 2}
---- !u!114 &268959197400785590
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7443408887813606051}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 28b19962fe839804180bd02ce1a545f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _serverBindAddress: 
-  _port: 7770
-  _maximumClients: 16
-  _peerToPeer: 1
-  _clientAddress: 
 --- !u!114 &602208854296968731
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -103,9 +85,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   manager: {fileID: 7443408887813606050}
-  _fishySteamworks: {fileID: 268959197400785590}
-  playerSpawner: {fileID: 5085451618084332523, guid: 8028344d5e9ed8241b69b121f0fd166d, type: 3}
---- !u!114 &7995409823871612448
+  _FishyFacepunch: {fileID: 6307317488061038283}
+--- !u!114 &6307317488061038283
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -114,9 +95,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 7443408887813606051}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef4bffeda13d7a748973ff9204401c07, type: 3}
+  m_Script: {fileID: 11500000, guid: 9da90c29836670c49809661c5c09cd5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _steamAppID: 480
+  _serverBindAddress: 
+  _port: 27015
+  _maximumClients: 16
+  _clientAddress: 
+  _timeout: 25
 --- !u!1001 &2130063410
 PrefabInstance:
   m_ObjectHideFlags: 0

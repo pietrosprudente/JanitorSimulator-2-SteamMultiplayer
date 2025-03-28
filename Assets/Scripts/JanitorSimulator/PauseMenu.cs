@@ -118,9 +118,9 @@ public class PauseMenu : MonoBehaviour
 
     public void Exit()
     {
+        Game.CurrentLobby.Leave();
         NetworkManager.Instances[0].ClientManager.StopConnection();
         if (NetworkManager.Instances[0].IsServer) NetworkManager.Instances[0].ServerManager.StopConnection(true);
-        SteamMatchmaking.LeaveLobby(new(Game.CurrentLobbyID));
         SceneManager.LoadScene(0);
     }
 }

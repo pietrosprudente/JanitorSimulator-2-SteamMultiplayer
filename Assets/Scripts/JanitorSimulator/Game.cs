@@ -1,31 +1,36 @@
+using System;
 using System.Linq;
 using FishNet.Component.Spawning;
 using FishNet.Connection;
 using FishNet.Managing;
 using FishNet.Managing.Scened;
 using Steamworks;
+using Steamworks.Data;
 using TMPro;
 using UnityEngine;
 
 public class Game : MonoBehaviour
 {
-    protected Callback<LobbyCreated_t> LbCreated;
-    protected Callback<GameLobbyJoinRequested_t> JoinReq;
-    protected Callback<LobbyEnter_t> LbJoined;
-
     public static Game Instance { get; private set; }
+    public static Lobby CurrentLobby { get; private set; }
     public static ulong CurrentLobbyID;
     public NetworkManager manager;
-    [SerializeField] private FishySteamworks.FishySteamworks _fishySteamworks;
+    [SerializeField] private FishyFacepunch.FishyFacepunch _FishyFacepunch;
 
     void Start()
     {
         Instance = this;
         manager = GetComponent<NetworkManager>();
-        _fishySteamworks = GetComponent<FishySteamworks.FishySteamworks>();
-        LbCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
-        JoinReq = Callback<GameLobbyJoinRequested_t>.Create(OnJoinRequest);
-        LbJoined = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
+        _FishyFacepunch = GetComponent<FishyFacepunch.FishyFacepunch>();
+        SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
+        SteamMatchmaking.OnLobbyEntered += OnLobbyEntered;
+        SteamFriends.OnGameLobbyJoinRequested += OnJoinRequest;
+        SteamMatchmaking.OnLobbyMemberDisconnected += OnLeave;
+    }
+
+    private void OnLeave(Lobby arg1, Friend arg2)
+    {
+        LeaveLobby();
     }
 
     public void LoadLevel()
@@ -39,53 +44,60 @@ public class Game : MonoBehaviour
 
     public static void CreateLobby()
     {
-        SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 4);
+        SteamMatchmaking.CreateLobbyAsync(16);
     }
 
-    private void OnLobbyCreated(LobbyCreated_t callback)
+    private void OnLobbyCreated(Result result, Lobby lobby)
     {
         //Debug.Log("Starting lobby creation: " + callback.m_eResult.ToString());
-        if (callback.m_eResult != EResult.k_EResultOK)
+        if (result != Result.OK)
             return;
 
-        CurrentLobbyID = callback.m_ulSteamIDLobby;
-        SteamMatchmaking.SetLobbyData(new CSteamID(CurrentLobbyID), "HostAddress", SteamUser.GetSteamID().ToString());
-        SteamMatchmaking.SetLobbyData(new CSteamID(CurrentLobbyID), "name", SteamFriends.GetPersonaName().ToString() + "'s lobby");
-        _fishySteamworks.SetClientAddress(SteamUser.GetSteamID().ToString());
-        _fishySteamworks.StartConnection(true);
+        CurrentLobby = lobby;
+        CurrentLobbyID = lobby.Id;
+
+        lobby.SetPublic();
+        lobby.SetData("HostAddress", SteamClient.SteamId.ToString());
+        lobby.SetData("name", SteamClient.Name + "'s lobby");
+        _FishyFacepunch.SetClientAddress(SteamClient.SteamId.ToString());
+        _FishyFacepunch.StartConnection(true);
         LoadLevel();
         Debug.Log("Lobby creation was successful");
     }
 
-    private void OnJoinRequest(GameLobbyJoinRequested_t callback)
+    private void OnJoinRequest(Lobby lobby, SteamId id)
     {
-        SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
+        SteamMatchmaking.JoinLobbyAsync(id);
     }
 
-    private void OnLobbyEntered(LobbyEnter_t callback)
+    private void OnLobbyEntered(Lobby lobby)
     {
-        CurrentLobbyID = callback.m_ulSteamIDLobby;
+        CurrentLobbyID = lobby.Id;
 
-        _fishySteamworks.SetClientAddress(SteamMatchmaking.GetLobbyData(new CSteamID(CurrentLobbyID), "HostAddress"));
-        _fishySteamworks.StartConnection(false);
+        _FishyFacepunch.SetClientAddress(lobby.Id.Value.ToString());
+        _FishyFacepunch.StartConnection(false);
     }
 
-    public static void JoinByID(CSteamID steamID)
+    public static void JoinByID(SteamId steamID)
     {
-        Debug.Log("Attempting to join lobby with ID: " + steamID.m_SteamID);
-        if (SteamMatchmaking.RequestLobbyData(steamID))
-            SteamMatchmaking.JoinLobby(steamID);
-        else
-            Debug.Log("Failed to join lobby with ID: " + steamID.m_SteamID);
+        Debug.Log("Attempting to join lobby with ID: " + steamID.Value);
+        try
+        {
+            SteamMatchmaking.JoinLobbyAsync(steamID);
+        }
+        catch (Exception e)
+        {
+            Debug.Log("Failed to join lobby with ID: " + steamID.Value);
+        }
     }
 
     public static void LeaveLobby()
     {
-        SteamMatchmaking.LeaveLobby(new CSteamID(CurrentLobbyID));
+        CurrentLobbyID = 0;
         CurrentLobbyID = 0;
 
-        Instance._fishySteamworks.StopConnection(false);
+        Instance._FishyFacepunch.StopConnection(false);
         if (Instance.manager.IsServer)
-            Instance._fishySteamworks.StopConnection(true);
+            Instance._FishyFacepunch.StopConnection(true);
     }
 }
