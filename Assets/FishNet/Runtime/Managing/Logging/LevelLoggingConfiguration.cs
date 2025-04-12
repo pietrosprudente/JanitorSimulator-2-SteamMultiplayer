@@ -1,7 +1,4 @@
-﻿#if UNITY_EDITOR || DEVELOPMENT_BUILD
-#define DEVELOPMENT
-#endif
-using FishNet.Documenting;
+﻿using FishNet.Documenting;
 using System;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -64,11 +61,13 @@ namespace FishNet.Managing.Logging
         public override void InitializeOnce()
         {
             byte currentHighest = (byte)LoggingType.Off;
-#if UNITY_SERVER
+#if UNITY_SERVER //if headless.
             currentHighest = Math.Max(currentHighest, (byte)_headlessLogging);
-#elif DEVELOPMENT
+#endif
+#if UNITY_EDITOR || DEVELOPMENT_BUILD //if editor or development.
             currentHighest = Math.Max(currentHighest, (byte)_developmentLogging);
-#else
+#endif
+#if !UNITY_EDITOR && !UNITY_SERVER //if a build.
             currentHighest = Math.Max(currentHighest, (byte)_guiLogging);
 #endif
             _highestLoggingType = (LoggingType)currentHighest;
@@ -87,9 +86,9 @@ namespace FishNet.Managing.Logging
 
             if (!_initialized)
             {
-#if DEVELOPMENT
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if (Application.isPlaying)
-                    NetworkManagerExtensions.LogError("CanLog called before being initialized.");
+                    Debug.LogError("CanLog called before being initialized.");
                 else
                     return true;
 #endif
@@ -102,7 +101,7 @@ namespace FishNet.Managing.Logging
         /// <summary>
         /// Logs a common value if can log.
         /// </summary>
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override void Log(string value)
         {
             if (CanLog(LoggingType.Common))
@@ -112,7 +111,7 @@ namespace FishNet.Managing.Logging
         /// <summary>
         /// Logs a warning value if can log.
         /// </summary>
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override void LogWarning(string value)
         {
             if (CanLog(LoggingType.Warning))
@@ -122,7 +121,7 @@ namespace FishNet.Managing.Logging
         /// <summary>
         /// Logs an error value if can log.
         /// </summary>
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override void LogError(string value)
         {
             if (CanLog(LoggingType.Error))

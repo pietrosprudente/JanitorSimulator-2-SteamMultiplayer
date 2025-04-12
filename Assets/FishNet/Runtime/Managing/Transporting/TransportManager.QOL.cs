@@ -1,5 +1,4 @@
-﻿using FishNet.Connection;
-using FishNet.Transporting;
+﻿using FishNet.Transporting;
 using FishNet.Transporting.Multipass;
 using UnityEngine;
 
@@ -11,19 +10,12 @@ namespace FishNet.Managing.Transporting
     /// </summary>
     public sealed partial class TransportManager : MonoBehaviour
     {
+        #region Public.
         /// <summary>
-        /// Returns IsLocalTransport for the transportId, optionally checking against a connectionId.
+        /// Returns IsLocalTransport for the current transport.
         /// </summary>
-        public bool IsLocalTransport(int transportId, int connectionId = NetworkConnection.UNSET_CLIENTID_VALUE)
-        {
-            if (Transport == null)
-                return false;
-
-            if (Transport is Multipass mp)
-                return mp.IsLocalTransport(transportId, connectionId);
-            else
-                return Transport.IsLocalTransport(connectionId);
-        }
+        public bool IsLocalTransport(int connectionId) => (Transport == null) ? false : Transport.IsLocalTransport(connectionId);
+        #endregion
 
         /// <summary>
         /// Gets transport on index.

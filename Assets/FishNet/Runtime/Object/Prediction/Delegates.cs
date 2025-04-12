@@ -2,7 +2,7 @@
 using FishNet.Documenting;
 using FishNet.Serializing;
 using FishNet.Transporting;
-using FishNet.Utility;
+using FishNet.Utility.Constant;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo(UtilityConstants.CODEGEN_ASSEMBLY_NAME)]
@@ -14,7 +14,8 @@ namespace FishNet.Object.Prediction.Delegating
     public delegate void ReconcileRpcDelegate(PooledReader reader, Channel channel);
 
     [APIExclude]
-    public delegate void ReplicateUserLogicDelegate<T>(T data, ReplicateState state, Channel channel);
+    public delegate void ReplicateUserLogicDelegate<T>(T data, bool asServer, Channel channel, bool replaying);
     [APIExclude]
-    public delegate void ReconcileUserLogicDelegate<T>(T data, Channel channel);
+    public delegate void ReconcileUserLogicDelegate<T>(T data, bool asServer, Channel channel);
+
 }

@@ -1,7 +1,6 @@
 ﻿#if UNITY_EDITOR
 using FishNet.Editing;
 using System.Collections.Generic;
-using FishNet.Managing;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -15,7 +14,7 @@ namespace FishNet.Component.Animating.Editing
     {
         private SerializedProperty _animator;
         private SerializedProperty _interpolation;
-        private SerializedProperty _synchronizeWhenDisabled;
+        //private SerializedProperty _synchronizeInterval;
         private SerializedProperty _smoothFloats;
         private SerializedProperty _clientAuthoritative;
         private SerializedProperty _sendToOwner;
@@ -24,13 +23,13 @@ namespace FishNet.Component.Animating.Editing
 
         protected virtual void OnEnable()
         {
-            _animator = serializedObject.FindProperty(nameof(_animator));
-            _interpolation = serializedObject.FindProperty(nameof(_interpolation));
-            _synchronizeWhenDisabled = serializedObject.FindProperty(nameof(_synchronizeWhenDisabled));
-            _smoothFloats = serializedObject.FindProperty(nameof(_smoothFloats));
+            _animator = serializedObject.FindProperty("_animator");
+            _interpolation = serializedObject.FindProperty("_interpolation");
+            //_synchronizeInterval = serializedObject.FindProperty("_synchronizeInterval");
+            _smoothFloats = serializedObject.FindProperty("_smoothFloats");
 
-            _clientAuthoritative = serializedObject.FindProperty(nameof(_clientAuthoritative));
-            _sendToOwner = serializedObject.FindProperty(nameof(_sendToOwner));
+            _clientAuthoritative = serializedObject.FindProperty("_clientAuthoritative");
+            _sendToOwner = serializedObject.FindProperty("_sendToOwner");
         }
 
         public override void OnInspectorGUI()
@@ -51,7 +50,6 @@ namespace FishNet.Component.Animating.Editing
             EditorGUILayout.LabelField("Animator", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(_animator);
-            EditorGUILayout.PropertyField(_synchronizeWhenDisabled);
             EditorGUI.indentLevel--;
             EditorGUILayout.Space();
 
@@ -59,6 +57,7 @@ namespace FishNet.Component.Animating.Editing
             EditorGUILayout.LabelField("Synchronization Processing", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(_interpolation);
+            //EditorGUILayout.PropertyField(_synchronizeInterval, new GUIContent("Synchronize Interval", "How often to synchronize this animator."));
             EditorGUILayout.PropertyField(_smoothFloats);
             EditorGUI.indentLevel--;
             EditorGUILayout.Space();
@@ -121,7 +120,7 @@ namespace FishNet.Component.Animating.Editing
             width -= spacer;
             int entriesPerWidth = Mathf.Max(1, Mathf.FloorToInt(width / (spacePerEntry + extraSpaceJustBecause)));
 
-            List<AnimatorControllerParameter> aps = new();
+            List<AnimatorControllerParameter> aps = new List<AnimatorControllerParameter>();
             //Create a parameter detail for each parameter that can be synchronized.
             int count = 0;
             foreach (AnimatorControllerParameter item in _lastAnimatorController.parameters)
@@ -137,7 +136,7 @@ namespace FishNet.Component.Animating.Editing
             int apsCount = aps.Count;
             for (int i = 0; i < apsCount; i++)
             {
-                using (GUILayout.HorizontalScope hs = new())
+                using (GUILayout.HorizontalScope hs = new GUILayout.HorizontalScope())
                 {
                     GUILayout.Space(spacer);
                     int z = 0;
@@ -157,7 +156,7 @@ namespace FishNet.Component.Animating.Editing
                         {
                             if (Application.isPlaying)
                             {
-                                NetworkManagerExtensions.Log("Synchronized parameters may not be changed while playing.");
+                                Debug.Log("Synchronized parameters may not be changed while playing.");
                             }
                             else
                             {
@@ -165,8 +164,8 @@ namespace FishNet.Component.Animating.Editing
                                     na.IgnoredParameters.Remove(parameterName);
                                 else
                                     na.IgnoredParameters.Add(parameterName);
+                                UnityEditor.EditorUtility.SetDirty(target);
                             }
-                            UnityEditor.EditorUtility.SetDirty(target);
                         }
 
                         z++;

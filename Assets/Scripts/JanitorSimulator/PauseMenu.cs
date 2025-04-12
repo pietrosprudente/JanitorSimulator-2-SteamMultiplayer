@@ -119,8 +119,8 @@ public class PauseMenu : MonoBehaviour
     public void Exit()
     {
         Game.CurrentLobby.Leave();
-        NetworkManager.Instances[0].ClientManager.StopConnection();
-        if (NetworkManager.Instances[0].IsServer) NetworkManager.Instances[0].ServerManager.StopConnection(true);
+        NetworkManager.Instances.ToArray()[0].ClientManager.StopConnection();
+        if (NetworkManager.Instances.ToArray()[0].IsServer) NetworkManager.Instances.ToArray()[0].ServerManager.StopConnection(true);
         SceneManager.LoadScene(0);
     }
 }

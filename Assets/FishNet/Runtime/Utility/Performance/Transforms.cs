@@ -20,7 +20,7 @@ namespace FishNet.Utility.Performance
         /// </summary>
         public static void GetTransformsInChildrenNonAlloc(this Transform t, ref List<Transform> results, bool includeInactive = false)
         {
-            t.GetComponentsInChildren(includeInactive, results);
+            t.GetComponentsInChildren<Transform>(includeInactive, results);
         }
 
     }

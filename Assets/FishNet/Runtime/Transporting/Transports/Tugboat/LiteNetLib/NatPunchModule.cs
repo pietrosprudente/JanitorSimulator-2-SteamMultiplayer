@@ -1,7 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Net.Sockets;
 using LiteNetLib.Utils;
 
 namespace LiteNetLib
@@ -60,29 +58,29 @@ namespace LiteNetLib
 
         class NatIntroduceRequestPacket
         {
-            public IPEndPoint Internal { [Preserve] get; [Preserve] set; }
-            public string Token { [Preserve] get; [Preserve] set; }
+            public IPEndPoint Internal { get; set; }
+            public string Token { get; set; }
         }
 
         class NatIntroduceResponsePacket
         {
-            public IPEndPoint Internal { [Preserve] get; [Preserve] set; }
-            public IPEndPoint External { [Preserve] get; [Preserve] set; }
-            public string Token { [Preserve] get; [Preserve] set; }
+            public IPEndPoint Internal { get; set; }
+            public IPEndPoint External { get; set; }
+            public string Token { get; set; }
         }
 
         class NatPunchPacket
         {
-            public string Token { [Preserve] get; [Preserve] set; }
-            public bool IsExternal { [Preserve] get; [Preserve] set; }
+            public string Token { get; set; }
+            public bool IsExternal { get; set; }
         }
 
         private readonly NetManager _socket;
-        private readonly ConcurrentQueue<RequestEventData> _requestEvents = new();
-        private readonly ConcurrentQueue<SuccessEventData> _successEvents = new();
-        private readonly NetDataReader _cacheReader = new();
-        private readonly NetDataWriter _cacheWriter = new();
-        private readonly NetPacketProcessor _netPacketProcessor = new(MaxTokenLength);
+        private readonly ConcurrentQueue<RequestEventData> _requestEvents = new ConcurrentQueue<RequestEventData>();
+        private readonly ConcurrentQueue<SuccessEventData> _successEvents = new ConcurrentQueue<SuccessEventData>();
+        private readonly NetDataReader _cacheReader = new NetDataReader();
+        private readonly NetDataWriter _cacheWriter = new NetDataWriter();
+        private readonly NetPacketProcessor _netPacketProcessor = new NetPacketProcessor(MaxTokenLength);
         private INatPunchListener _natPunchListener;
         public const int MaxTokenLength = 256;
 
@@ -113,11 +111,7 @@ namespace LiteNetLib
             _natPunchListener = listener;
         }
 
-        private void Send<
-#if NET5_0_OR_GREATER
-            [DynamicallyAccessedMembers(Trimming.SerializerMemberTypes)]
-#endif
-        T>(T packet, IPEndPoint target) where T : class, new()
+        private void Send<T>(T packet, IPEndPoint target) where T : class, new()
         {
             _cacheWriter.Reset();
             _cacheWriter.Put((byte)PacketProperty.NatMessage);
@@ -179,7 +173,7 @@ namespace LiteNetLib
         {
             //prepare outgoing data
             string networkIp = NetUtils.GetLocalIp(LocalAddrType.IPv4);
-            if (string.IsNullOrEmpty(networkIp) || masterServerEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
+            if (string.IsNullOrEmpty(networkIp))
             {
                 networkIp = NetUtils.GetLocalIp(LocalAddrType.IPv6);
             }
@@ -205,7 +199,7 @@ namespace LiteNetLib
             }
             else
             {
-                _requestEvents.Enqueue(new()
+                _requestEvents.Enqueue(new RequestEventData
                 {
                     LocalEndPoint = req.Internal,
                     RemoteEndPoint = senderEndPoint,
@@ -222,7 +216,7 @@ namespace LiteNetLib
             // send internal punch
             var punchPacket = new NatPunchPacket {Token = req.Token};
             Send(punchPacket, req.Internal);
-            NetDebug.Write(NetLogLevel.Trace, $"[NAT] internal punch sent to {req.Internal}");
+            NetDebug.Write(NetLogLevel.Trace, "[NAT] internal punch sent to " + req.Internal);
 
             // hack for some routers
             _socket.Ttl = 2;
@@ -232,14 +226,15 @@ namespace LiteNetLib
             _socket.Ttl = NetConstants.SocketTTL;
             punchPacket.IsExternal = true;
             Send(punchPacket, req.External);
-            NetDebug.Write(NetLogLevel.Trace, $"[NAT] external punch sent to {req.External}");
+            NetDebug.Write(NetLogLevel.Trace, "[NAT] external punch sent to " + req.External);
         }
 
         //We got punch and can connect
         private void OnNatPunch(NatPunchPacket req, IPEndPoint senderEndPoint)
         {
             //Read info
-            NetDebug.Write(NetLogLevel.Trace, $"[NAT] punch received from {senderEndPoint} - additional info: {req.Token}");
+            NetDebug.Write(NetLogLevel.Trace, "[NAT] punch received from {0} - additional info: {1}",
+                senderEndPoint, req.Token);
 
             //Release punch success to client; enabling him to Connect() to Sender if token is ok
             if(UnsyncedEvents)
@@ -252,7 +247,7 @@ namespace LiteNetLib
             }
             else
             {
-                _successEvents.Enqueue(new()
+                _successEvents.Enqueue(new SuccessEventData
                 {
                     TargetEndPoint = senderEndPoint,
                     Type = req.IsExternal ? NatAddressType.External : NatAddressType.Internal,

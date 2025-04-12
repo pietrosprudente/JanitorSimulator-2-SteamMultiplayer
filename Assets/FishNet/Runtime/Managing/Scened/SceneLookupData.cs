@@ -1,4 +1,4 @@
-﻿using GameKit.Dependencies.Utilities;
+﻿using GameKit.Utilities;
 using System;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
@@ -199,19 +199,19 @@ namespace FishNet.Managing.Scened
         /// </summary>
         /// <param name="scene">Scene to create from.</param>
         /// <returns></returns>
-        public static SceneLookupData CreateData(Scene scene) => new(scene);
+        public static SceneLookupData CreateData(Scene scene) => new SceneLookupData(scene);
         /// <summary>
         /// Returns a new SceneLookupData.
         /// </summary>
         /// <param name="scene">Scene name to create from.</param>
         /// <returns></returns>
-        public static SceneLookupData CreateData(string name) => new(name);
+        public static SceneLookupData CreateData(string name) => new SceneLookupData(name);
         /// <summary>
         /// Returns a new SceneLookupData.
         /// </summary>
         /// <param name="scene">Scene handle to create from.</param>
         /// <returns></returns>
-        public static SceneLookupData CreateData(int handle) => new(handle);
+        public static SceneLookupData CreateData(int handle) => new SceneLookupData(handle);
         /// <summary>
         /// Returns a SceneLookupData collection.
         /// </summary>
@@ -238,7 +238,7 @@ namespace FishNet.Managing.Scened
         public static SceneLookupData[] CreateData(Scene[] scenes)
         {
             bool invalidFound = false;
-            List<SceneLookupData> result = new();
+            List<SceneLookupData> result = new List<SceneLookupData>();
             foreach (Scene item in scenes)
             {
                 if (!item.IsValid())
@@ -251,7 +251,7 @@ namespace FishNet.Managing.Scened
             }
 
             if (invalidFound)
-                NetworkManagerExtensions.LogWarning(INVALID_SCENE);
+                NetworkManager.StaticLogWarning(INVALID_SCENE);
 
             return result.ToArray();
         }
@@ -264,7 +264,7 @@ namespace FishNet.Managing.Scened
         {
             SceneLookupData[] result = new SceneLookupData[names.Length];
             for (int i = 0; i < result.Length; i++)
-                result[i] = new(names[i]);
+                result[i] = new SceneLookupData(names[i]);
 
             return ValidateData(result);
         }
@@ -308,7 +308,7 @@ namespace FishNet.Managing.Scened
                     }
 
                     if (failingIndex != -1)
-                        NetworkManagerExtensions.LogWarning($"Data {item.ToString()} matches {result[failingIndex].ToString()} and has been removed from datas.");
+                        NetworkManager.StaticLogWarning($"Data {item.ToString()} matches {result[failingIndex].ToString()} and has been removed from datas.");
                     else
                         result.Add(item);
                 }
@@ -321,7 +321,7 @@ namespace FishNet.Managing.Scened
             SceneLookupData[] returnedValue;
             if (invalidFound)
             {
-                NetworkManagerExtensions.LogWarning(INVALID_SCENE);
+                NetworkManager.StaticLogWarning(INVALID_SCENE);
                 returnedValue = result.ToArray();
             }
             else
@@ -341,7 +341,7 @@ namespace FishNet.Managing.Scened
         public static SceneLookupData[] CreateData(int[] handles)
         {
             bool invalidFound = false;
-            List<SceneLookupData> result = new();
+            List<SceneLookupData> result = new List<SceneLookupData>();
             foreach (int item in handles)
             {
                 if (item == 0)
@@ -354,7 +354,7 @@ namespace FishNet.Managing.Scened
             }
 
             if (invalidFound)
-                NetworkManagerExtensions.LogWarning(INVALID_SCENE);
+                NetworkManager.StaticLogWarning(INVALID_SCENE);
 
             return result.ToArray();
         }
@@ -385,7 +385,7 @@ namespace FishNet.Managing.Scened
 
             if (Handle == 0 && string.IsNullOrEmpty(NameOnly))
             {
-                NetworkManagerExtensions.LogWarning("Scene handle and name is unset; scene cannot be returned.");
+                NetworkManager.StaticLogWarning("Scene handle and name is unset; scene cannot be returned.");
                 return default;
             }
 

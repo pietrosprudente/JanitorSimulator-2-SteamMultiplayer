@@ -15,13 +15,17 @@ namespace FishNet.Editing
 
         private const string SHOWED_GETTING_STARTED = "ShowedFishNetGettingStarted";
 
-        [MenuItem("Tools/Fish-Networking/Getting Started")]
+        [MenuItem("Fish-Networking/Getting Started")]
         public static void GettingStartedMenu()
         {
             FishNetGettingStartedEditor window = (FishNetGettingStartedEditor)EditorWindow.GetWindow(typeof(FishNetGettingStartedEditor));
-            window.position = new(0, 0, 320, 355);
+            window.position = new Rect(0, 0, 320, 355);
             Rect mainPos;
+#if UNITY_2020_1_OR_NEWER
             mainPos = EditorGUIUtility.GetMainWindowPosition();
+#else
+            mainPos = new Rect(Vector2.zero, Vector2.zero);
+#endif
             var pos = window.position;  
             float w = (mainPos.width - pos.width) * 0.5f;
             float h = (mainPos.height - pos.height) * 0.5f;
@@ -30,7 +34,7 @@ namespace FishNet.Editing
             window.position = pos;
 
             window._fishnetLogo = (Texture2D)AssetDatabase.LoadAssetAtPath("Assets/FishNet/Runtime/Editor/Textures/UI/Logo_With_Text.png", typeof(Texture));
-            window._labelStyle = new("label");
+            window._labelStyle = new GUIStyle("label");
             window._labelStyle.fontSize = 24;
             window._labelStyle.wordWrap = true;   
             //window.labelStyle.alignment = TextAnchor.MiddleCenter;
@@ -38,7 +42,7 @@ namespace FishNet.Editing
 
             window._reviewButtonBg = MakeBackgroundTexture(1, 1, new Color32(52, 111, 255, 255));
             window._reviewButtonBgHover = MakeBackgroundTexture(1, 1, new Color32(99, 153, 255, 255));
-            window._reviewButtonStyle = new("button");
+            window._reviewButtonStyle = new GUIStyle("button");
             window._reviewButtonStyle.fontSize = 18;
             window._reviewButtonStyle.fontStyle = FontStyle.Bold;
             window._reviewButtonStyle.normal.background = window._reviewButtonBg;
@@ -48,7 +52,7 @@ namespace FishNet.Editing
             window._reviewButtonStyle.hover.background = window._reviewButtonBgHover;
             window._reviewButtonStyle.onHover.background = window._reviewButtonBgHover;
             window._reviewButtonStyle.alignment = TextAnchor.MiddleCenter;
-            window._reviewButtonStyle.normal.textColor = new(1, 1, 1, 1);
+            window._reviewButtonStyle.normal.textColor = new Color(1, 1, 1, 1);
 
         }
 
@@ -59,7 +63,6 @@ namespace FishNet.Editing
         private static void Initialize()
         {
             SubscribeToUpdate();
-            LogFeedbackLink();
         }
 
         private static void SubscribeToUpdate()
@@ -92,7 +95,8 @@ namespace FishNet.Editing
             }
         }
 
-        private void OnGUI()
+
+        void OnGUI()
         {
 
 
@@ -140,10 +144,10 @@ namespace FishNet.Editing
                 Application.OpenURL("https://www.firstgeargames.com/");
             }
 
-            //if (GUILayout.Button("Examples", GUILayout.Width(this.position.width * 0.485f)))
-            //{
-            //    Application.OpenURL("https://fish-networking.gitbook.io/docs/manual/tutorials/example-projects");
-            //}
+            if (GUILayout.Button("Examples", GUILayout.Width(this.position.width * 0.485f)))
+            {
+                Application.OpenURL("https://fish-networking.gitbook.io/docs/manual/tutorials/example-projects");
+            }
             EditorGUILayout.EndHorizontal();
 
             //GUILayout.Space(20);
@@ -157,21 +161,10 @@ namespace FishNet.Editing
             Color[] pixels = new Color[width * height];
             for (int i = 0; i < pixels.Length; i++)
                 pixels[i] = color;
-            Texture2D backgroundTexture = new(width, height);
+            Texture2D backgroundTexture = new Texture2D(width, height);
             backgroundTexture.SetPixels(pixels);
             backgroundTexture.Apply();
             return backgroundTexture;
-        }
-
-        private static void LogFeedbackLink()
-        {
-            //Only log the link when editor opens.
-            if (Time.realtimeSinceStartup < 10f)
-            {
-                string msg = @"Thank you for using Fish-Networking! If you have any feedback—whether it's suggestions, documentation, or performance-related—please let us know through our anonymous <a href=https://forms.gle/1g13VY4KKMnEqpkp6>Google feedback form!</a>";
-                Debug.Log(msg);
-            }
-            
         }
     }
 

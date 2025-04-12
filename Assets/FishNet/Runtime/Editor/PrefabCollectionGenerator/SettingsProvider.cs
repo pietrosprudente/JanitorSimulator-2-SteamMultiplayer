@@ -16,7 +16,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
 {
     internal static class SettingsProvider
     {
-        private static readonly Regex SlashRegex = new(@"[\\//]");
+        private static readonly Regex SlashRegex = new Regex(@"[\\//]");
 
         private static PrefabGeneratorConfigurations _settings;
 
@@ -30,7 +30,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
         [UnitySettingsProvider]
         private static UnitySettingsProvider Create()
         {
-            return new("Project/Fish-Networking/Prefab Objects Generator", SettingsScope.Project)
+            return new UnitySettingsProvider("Project/Fish-Networking/Prefab Objects Generator", SettingsScope.Project)
             {
                 label = "Prefab Objects Generator",
 
@@ -57,9 +57,9 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                 _deleteIcon = EditorGUIUtility.IconContent("P4_DeletedLocal");
 
             EditorGUI.BeginChangeCheck();
-            GUIStyle scrollViewStyle = new()
+            GUIStyle scrollViewStyle = new GUIStyle()
             {
-                padding = new(10, 10, 10, 10),
+                padding = new RectOffset(10, 10, 10, 10),
             };
 
             _scrollVector = EditorGUILayout.BeginScrollView(_scrollVector, scrollViewStyle);
@@ -67,7 +67,6 @@ namespace FishNet.Editing.PrefabCollectionGenerator
             _settings.Enabled = EditorGUILayout.Toggle(ObjectNames.NicifyVariableName(nameof(_settings.Enabled)), _settings.Enabled);
             _settings.LogToConsole = EditorGUILayout.Toggle(ObjectNames.NicifyVariableName(nameof(_settings.LogToConsole)), _settings.LogToConsole);
             _settings.FullRebuild = EditorGUILayout.Toggle(ObjectNames.NicifyVariableName(nameof(_settings.FullRebuild)), _settings.FullRebuild);
-            _settings.SpawnableOnly = EditorGUILayout.Toggle(ObjectNames.NicifyVariableName(nameof(_settings.SpawnableOnly)), _settings.SpawnableOnly);
             _settings.SaveChanges = EditorGUILayout.Toggle(ObjectNames.NicifyVariableName(nameof(_settings.SaveChanges)), _settings.SaveChanges);
 
             GUILayoutOption iconWidthConstraint = GUILayout.MaxWidth(32.0f);
@@ -83,7 +82,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                 if (TrySaveFilePathInsideAssetsFolder(null, Application.dataPath, "DefaultPrefabObjects", "asset", out string result))
                     newAssetPath = result;
                 else
-                    EditorWindow.focusedWindow.ShowNotification(new($"{ObjectNames.NicifyVariableName(nameof(_settings.DefaultPrefabObjectsPath))} must be inside the Assets folder."));
+                    EditorWindow.focusedWindow.ShowNotification(new GUIContent($"{ObjectNames.NicifyVariableName(nameof(_settings.DefaultPrefabObjectsPath))} must be inside the Assets folder."));
             }
 
             if (!newAssetPath.Equals(oldAssetPath, StringComparison.OrdinalIgnoreCase))
@@ -92,7 +91,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                 {
                     if (File.Exists(newAssetPath))
                     {
-                        EditorWindow.focusedWindow.ShowNotification(new("Another asset already exists at the new path."));
+                        EditorWindow.focusedWindow.ShowNotification(new GUIContent("Another asset already exists at the new path."));
                     }
                     else
                     {
@@ -107,7 +106,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                 }
                 else
                 {
-                    EditorWindow.focusedWindow.ShowNotification(new($"{ObjectNames.NicifyVariableName(nameof(_settings.DefaultPrefabObjectsPath))} must be inside the Assets folder."));
+                    EditorWindow.focusedWindow.ShowNotification(new GUIContent($"{ObjectNames.NicifyVariableName(nameof(_settings.DefaultPrefabObjectsPath))} must be inside the Assets folder."));
                 }
             }
 
@@ -159,7 +158,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                         if (newFolder.StartsWith($"Assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                             folders[i] = newFolder;
                         else
-                            EditorWindow.focusedWindow.ShowNotification(new($"{folderName} must be inside the Assets folder."));
+                            EditorWindow.focusedWindow.ShowNotification(new GUIContent($"{folderName} must be inside the Assets folder."));
                     }
 
                     if (GUILayout.Button(_folderIcon, iconWidthConstraint, iconHeightConstraint))
@@ -167,7 +166,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                         if (TryOpenFolderPathInsideAssetsFolder(null, Application.dataPath, null, out string result))
                             folders[i] = result;
                         else
-                            EditorWindow.focusedWindow.ShowNotification(new($"{folderName} must be inside the Assets folder."));
+                            EditorWindow.focusedWindow.ShowNotification(new GUIContent($"{folderName} must be inside the Assets folder."));
                     }
 
                     if (GUILayout.Button(_deleteIcon, iconWidthConstraint, iconHeightConstraint)) folders.RemoveAt(i);
@@ -187,7 +186,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                     }
                     else
                     {
-                        EditorWindow.focusedWindow.ShowNotification(new($"{folderName} must be inside the Assets folder."));
+                        EditorWindow.focusedWindow.ShowNotification(new GUIContent($"{folderName} must be inside the Assets folder."));
                     }
                 }
             }

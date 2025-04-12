@@ -3,7 +3,7 @@
     /// <summary>
     /// Which physics to apply after rolling back colliders.
     /// </summary>
-    [System.Serializable][System.Flags]
+    [System.Serializable]
     public enum RollbackPhysicsType
     {
         Physics = 1,

@@ -1,4 +1,5 @@
 using System.Collections;
+using FishNet.Object;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -18,10 +19,10 @@ public class ShiftManager : MonoBehaviour
     {
         foreach(var gadget in MainMenuManager.unlockedGadgets)
         {
-            Instantiate(gadget);
+            GameManagerA.Singleton.SpawnGadget(gadget.GetComponent<NetworkObject>(), GameManagerA.Singleton.LocalConnection);
         }
 
-        if(isFreePlay)
+        if (isFreePlay)
         {
             yield break;
         }

@@ -1,9 +1,12 @@
 using System;
 using System.Linq;
+using System.Net;
 using FishNet.Component.Spawning;
 using FishNet.Connection;
 using FishNet.Managing;
 using FishNet.Managing.Scened;
+using FishNet.Transporting.Multipass;
+using FishyFacepunch;
 using Steamworks;
 using Steamworks.Data;
 using TMPro;
@@ -20,8 +23,8 @@ public class Game : MonoBehaviour
     void Start()
     {
         Instance = this;
-        manager = GetComponent<NetworkManager>();
-        _FishyFacepunch = GetComponent<FishyFacepunch.FishyFacepunch>();
+        TryGetComponent(out manager);
+        TryGetComponent(out _FishyFacepunch);
         SteamMatchmaking.OnLobbyCreated += OnLobbyCreated;
         SteamMatchmaking.OnLobbyEntered += OnLobbyEntered;
         SteamFriends.OnGameLobbyJoinRequested += OnJoinRequest;
@@ -56,6 +59,7 @@ public class Game : MonoBehaviour
         CurrentLobby = lobby;
         CurrentLobbyID = lobby.Id;
 
+        lobby.SetGameServer(CurrentLobbyID);
         lobby.SetPublic();
         lobby.SetData("HostAddress", SteamClient.SteamId.ToString());
         lobby.SetData("name", SteamClient.Name + "'s lobby");
@@ -81,13 +85,14 @@ public class Game : MonoBehaviour
     public static void JoinByID(SteamId steamID)
     {
         Debug.Log("Attempting to join lobby with ID: " + steamID.Value);
+        Instance._FishyFacepunch.SetClientAddress(steamID.Value.ToString());
         try
         {
-            SteamMatchmaking.JoinLobbyAsync(steamID);
+            Instance._FishyFacepunch.StartConnection(false);
         }
-        catch (Exception e)
+        catch
         {
-            Debug.Log("Failed to join lobby with ID: " + steamID.Value);
+            SteamMatchmaking.JoinLobbyAsync(steamID);
         }
     }
 

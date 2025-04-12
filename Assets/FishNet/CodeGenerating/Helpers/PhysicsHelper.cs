@@ -101,7 +101,7 @@ namespace FishNet.CodeGenerating.Helping
         /// </summary>
         public List<Instruction> GetPhysicsScene(ILProcessor processor, VariableDefinition gameObjectVd, bool threeDimensional)
         {
-            List<Instruction> insts = new();
+            List<Instruction> insts = new List<Instruction>();
 
             //gameObject.scene.GetPhysics...
             insts.Add(processor.Create(OpCodes.Ldloc, gameObjectVd));

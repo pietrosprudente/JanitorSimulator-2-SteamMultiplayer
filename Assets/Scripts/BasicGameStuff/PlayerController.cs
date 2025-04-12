@@ -55,8 +55,8 @@ namespace BasicGameStuff
         private Rigidbody rb;
         private Vector3 velocity;
 
-        public readonly SyncVar<string> nickname = new();
-        public readonly SyncVar<SteamId> steamID = new();
+        [SyncVar] public string nickname;
+        [SyncVar] public SteamId steamID;
         public TMP_Text nicknameTMP;
         public Renderer face;
         public GameObject broomObject;
@@ -73,6 +73,7 @@ namespace BasicGameStuff
             Instance = this;
             MouseCaptured = true;
             SetupSteamPlayer(SteamClient.IsLoggedOn ? SteamClient.Name : "Player " + Random.Range(1111, 9999), SteamClient.SteamId);
+            InvokeRepeating(nameof(UpdatePlayerAvatar), 1, 10);
         }
 
         private GameObject spawnedBroom;
@@ -80,8 +81,8 @@ namespace BasicGameStuff
         [ServerRpc]
         private void SetupSteamPlayer(string newName, SteamId newID)
         {
-            nickname.Value = newName;
-            steamID.Value = newID;
+            nickname = newName;
+            steamID = newID;
             var broom = Instantiate(broomObject, transform.position, Quaternion.identity);
             Spawn(broom, Owner);
             spawnedBroom = broom.transform.GetChild(0).gameObject;
@@ -100,14 +101,14 @@ namespace BasicGameStuff
             rb.rotation = Quaternion.identity;
         }
 
-        public readonly SyncVar<bool> canPush = new(true);
+        [SyncVar] public bool canPush = true;
 
         [ServerRpc]
         public void Push()
         {
-            if (!canPush.Value) return;
-            canPush.Value = false;
-            Invoke(nameof(ResetCanPush), 0.6f);
+            if (!canPush) return;
+            canPush = false;
+            Invoke(methodName: nameof(ResetCanPush), 0.6f);
             Ray ray = new()
             {
                 origin = cameraObject.transform.position,
@@ -129,7 +130,7 @@ namespace BasicGameStuff
         [ServerRpc(RequireOwnership = false)]
         private void ResetCanPush()
         {
-            canPush.Value = false;
+            canPush = false;
         }
 
         [TargetRpc]
@@ -181,8 +182,7 @@ namespace BasicGameStuff
         
         private void Update()
         {
-            nicknameTMP.text = nickname.Value;
-            UpdatePlayerAvatar();
+            nicknameTMP.text = nickname;
             if (!IsOwner) return;
             rb.isKinematic = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex != 1;
             myCamera.transform.position = tps ? tpsPos.position : cameraObject.transform.position;

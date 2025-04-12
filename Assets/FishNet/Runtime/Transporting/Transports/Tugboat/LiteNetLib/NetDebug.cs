@@ -40,7 +40,7 @@ namespace LiteNetLib
     public static class NetDebug
     {
         public static INetLogger Logger = null;
-        private static readonly object DebugLogLock = new();
+        private static readonly object DebugLogLock = new object();
         private static void WriteLogic(NetLogLevel logLevel, string str, params object[] args)
         {
             lock (DebugLogLock)
@@ -61,32 +61,32 @@ namespace LiteNetLib
         }
 
         [Conditional("DEBUG_MESSAGES")]
-        internal static void Write(string str)
+        internal static void Write(string str, params object[] args)
         {
-            WriteLogic(NetLogLevel.Trace, str);
+            WriteLogic(NetLogLevel.Trace, str, args);
         }
 
         [Conditional("DEBUG_MESSAGES")]
-        internal static void Write(NetLogLevel level, string str)
+        internal static void Write(NetLogLevel level, string str, params object[] args)
         {
-            WriteLogic(level, str);
+            WriteLogic(level, str, args);
         }
 
         [Conditional("DEBUG_MESSAGES"), Conditional("DEBUG")]
-        internal static void WriteForce(string str)
+        internal static void WriteForce(string str, params object[] args)
         {
-            WriteLogic(NetLogLevel.Trace, str);
+            WriteLogic(NetLogLevel.Trace, str, args);
         }
 
         [Conditional("DEBUG_MESSAGES"), Conditional("DEBUG")]
-        internal static void WriteForce(NetLogLevel level, string str)
+        internal static void WriteForce(NetLogLevel level, string str, params object[] args)
         {
-            WriteLogic(level, str);
+            WriteLogic(level, str, args);
         }
 
-        internal static void WriteError(string str)
+        internal static void WriteError(string str, params object[] args)
         {
-            WriteLogic(NetLogLevel.Error, str);
+            WriteLogic(NetLogLevel.Error, str, args);
         }
     }
 }

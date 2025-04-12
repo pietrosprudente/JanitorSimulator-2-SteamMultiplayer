@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace LiteNetLib
 {
@@ -18,7 +18,7 @@ namespace LiteNetLib
             _id = id;
             _reliable = reliable;
             if (_reliable)
-                _ackPacket = new(PacketProperty.Ack, 0) {ChannelId = id};
+                _ackPacket = new NetPacket(PacketProperty.Ack, 0) {ChannelId = id};
         }
 
         protected override bool SendNextPackets()
@@ -39,25 +39,21 @@ namespace LiteNetLib
             }
             else
             {
-                lock (OutgoingQueue)
+                while (OutgoingQueue.TryDequeue(out var packet))
                 {
-                    while (OutgoingQueue.Count > 0)
-                    {
-                        NetPacket packet = OutgoingQueue.Dequeue();
-                        _localSequence = (_localSequence + 1) % NetConstants.MaxSequence;
-                        packet.Sequence = (ushort)_localSequence;
-                        packet.ChannelId = _id;
-                        Peer.SendUserData(packet);
+                    _localSequence = (_localSequence + 1) % NetConstants.MaxSequence;
+                    packet.Sequence = (ushort)_localSequence;
+                    packet.ChannelId = _id;
+                    Peer.SendUserData(packet);
 
-                        if (_reliable && OutgoingQueue.Count == 0)
-                        {
-                            _lastPacketSendTime = DateTime.UtcNow.Ticks;
-                            _lastPacket = packet;
-                        }
-                        else
-                        {
-                            Peer.NetManager.PoolRecycle(packet);
-                        }
+                    if (_reliable && OutgoingQueue.Count == 0)
+                    {
+                        _lastPacketSendTime = DateTime.UtcNow.Ticks;
+                        _lastPacket = packet;
+                    }
+                    else
+                    {
+                        Peer.NetManager.PoolRecycle(packet);
                     }
                 }
             }

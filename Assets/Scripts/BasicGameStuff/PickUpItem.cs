@@ -26,6 +26,7 @@ namespace BasicGameStuff
         public void GrabItem(NetworkConnection conn)
         {
             NetworkObject.GiveOwnership(conn);
+            rb.isKinematic = false;
         }
 
         [ServerRpc(RequireOwnership = false)]

@@ -18,7 +18,7 @@ namespace FishNet.CodeGenerating.Helping.Extension
         /// </summary>
         internal static GenericInstanceType CreateGenericInstanceType(this TypeDefinition type, Collection<GenericParameter> parameters)
         {
-            GenericInstanceType git = new(type);
+            GenericInstanceType git = new GenericInstanceType(type);
             foreach (GenericParameter gp in parameters)
                 git.GenericArguments.Add(gp);
 
@@ -46,7 +46,7 @@ namespace FishNet.CodeGenerating.Helping.Extension
                         continue;
                     if (fd.IsNotSerialized)
                         continue;
-                    if (gh.HasExcludeSerializationAttribute(fd))
+                    if (gh.CodegenExclude(fd))
                         continue;
                     if (fd.IsPrivate)
                         continue;
@@ -78,7 +78,7 @@ namespace FishNet.CodeGenerating.Helping.Extension
                     //Missing get or set method.
                     if (pd.GetMethod == null || pd.SetMethod == null)
                         continue;
-                    if (gh.HasExcludeSerializationAttribute(pd))
+                    if (gh.CodegenExclude(pd))
                         continue;
                     if (pd.GetMethod.IsPrivate)
                         continue;

@@ -1,9 +1,10 @@
-﻿#if FISHNET_STABLE_SYNCTYPES
-using FishNet.Documenting;
-using FishNet.Managing;
+﻿using FishNet.Documenting;
+using FishNet.Managing.Logging;
 using FishNet.Object.Synchronizing.Internal;
 using FishNet.Serializing;
-using GameKit.Dependencies.Utilities;
+using FishNet.Serializing.Helping;
+using FishNet.Utility.Performance;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -11,7 +12,7 @@ using UnityEngine;
 
 namespace FishNet.Object.Synchronizing
 {
-    [System.Serializable]
+
     public class SyncHashSet<T> : SyncBase, ISet<T>
     {
         #region Types.
@@ -53,7 +54,6 @@ namespace FishNet.Object.Synchronizing
         /// </summary>
         [APIExclude]
         public bool IsReadOnly => false;
-
         /// <summary>
         /// Delegate signature for when SyncList changes.
         /// </summary>
@@ -62,7 +62,6 @@ namespace FishNet.Object.Synchronizing
         /// <param name="asServer">True if callback is occuring on the server.</param>
         [APIExclude]
         public delegate void SyncHashSetChanged(SyncHashSetOperation op, T item, bool asServer);
-
         /// <summary>
         /// Called when the SyncList changes.
         /// </summary>
@@ -70,44 +69,42 @@ namespace FishNet.Object.Synchronizing
         /// <summary>
         /// Collection of objects.
         /// </summary>
-        public HashSet<T> Collection;
+        public readonly ISet<T> Collection;
         /// <summary>
         /// Copy of objects on client portion when acting as a host.
         /// </summary>
-        [HideInInspector]
-        public HashSet<T> ClientHostCollection;
+        public readonly ISet<T> ClientHostCollection = new HashSet<T>();
         /// <summary>
         /// Number of objects in the collection.
         /// </summary>
         public int Count => Collection.Count;
         #endregion
 
-        #region Private.
+        #region Private.        
         /// <summary>
         /// ListCache for comparing.
         /// </summary>
-        private static List<T> _cache = new();
+        private static List<T> _cache = new List<T>();
         /// <summary>
         /// Values upon initialization.
         /// </summary>
-        private HashSet<T> _initialValues;
+        private ISet<T> _initialValues = new HashSet<T>();
+        /// <summary>
+        /// Comparer to see if entries change when calling public methods.
+        /// </summary>
+        private readonly IEqualityComparer<T> _comparer;
         /// <summary>
         /// Changed data which will be sent next tick.
         /// </summary>
-        private List<ChangeData> _changed;
+        private readonly List<ChangeData> _changed = new List<ChangeData>();
         /// <summary>
         /// Server OnChange events waiting for start callbacks.
         /// </summary>
-        private List<CachedOnChange> _serverOnChanges;
+        private readonly List<CachedOnChange> _serverOnChanges = new List<CachedOnChange>();
         /// <summary>
         /// Client OnChange events waiting for start callbacks.
         /// </summary>
-        private List<CachedOnChange> _clientOnChanges;
-        /// <summary>
-        /// Comparer to see if entries change when calling public methods.
-        /// //Not used right now.
-        /// </summary>
-        private readonly IEqualityComparer<T> _comparer;
+        private readonly List<CachedOnChange> _clientOnChanges = new List<CachedOnChange>();
         /// <summary>
         /// True if values have changed since initialization.
         /// The only reasonable way to reset this during a Reset call is by duplicating the original list and setting all values to it on reset.
@@ -119,53 +116,26 @@ namespace FishNet.Object.Synchronizing
         private bool _sendAll;
         #endregion
 
-        #region Constructors.
-        public SyncHashSet(SyncTypeSettings settings = new()) : this(CollectionCaches<T>.RetrieveHashSet(), EqualityComparer<T>.Default, settings) { }
-        public SyncHashSet(IEqualityComparer<T> comparer, SyncTypeSettings settings = new()) : this(CollectionCaches<T>.RetrieveHashSet(), (comparer == null) ? EqualityComparer<T>.Default : comparer, settings) { }
-
-        public SyncHashSet(HashSet<T> collection, IEqualityComparer<T> comparer = null, SyncTypeSettings settings = new()) : base(settings)
+        [APIExclude]
+        public SyncHashSet() : this(new HashSet<T>(), EqualityComparer<T>.Default) { }
+        [APIExclude]
+        public SyncHashSet(IEqualityComparer<T> comparer) : this(new HashSet<T>(), (comparer == null) ? EqualityComparer<T>.Default : comparer) { }
+        [APIExclude]
+        public SyncHashSet(ISet<T> collection, IEqualityComparer<T> comparer = null)
         {
-            _comparer = (comparer == null) ? EqualityComparer<T>.Default : comparer;
-            Collection = collection;
-            ClientHostCollection = CollectionCaches<T>.RetrieveHashSet();
-
-            _initialValues = CollectionCaches<T>.RetrieveHashSet();
-            _changed = CollectionCaches<ChangeData>.RetrieveList();
-            _serverOnChanges = CollectionCaches<CachedOnChange>.RetrieveList();
-            _clientOnChanges = CollectionCaches<CachedOnChange>.RetrieveList();
-
+            this._comparer = (comparer == null) ? EqualityComparer<T>.Default : comparer;
+            this.Collection = collection;
             //Add each in collection to clienthostcollection.
             foreach (T item in collection)
                 ClientHostCollection.Add(item);
         }
-        #endregion
-
-        #region Deconstructor.
-        ~SyncHashSet()
-        {
-            CollectionCaches<T>.StoreAndDefault(ref Collection);
-            CollectionCaches<T>.StoreAndDefault(ref ClientHostCollection);
-            CollectionCaches<T>.StoreAndDefault(ref _initialValues);
-            CollectionCaches<ChangeData>.StoreAndDefault(ref _changed);
-            CollectionCaches<CachedOnChange>.StoreAndDefault(ref _serverOnChanges);
-            CollectionCaches<CachedOnChange>.StoreAndDefault(ref _clientOnChanges);
-        }
-        #endregion
 
         /// <summary>
         /// Called when the SyncType has been registered, but not yet initialized over the network.
         /// </summary>
-        protected override void Initialized()
+        protected override void Registered()
         {
-            base.Initialized();
-
-            //Initialize collections if needed. OdinInspector can cause them to become deinitialized.
-#if ODIN_INSPECTOR
-            if (_initialValues == null) _initialValues = new();
-            if (_changed == null) _changed = new();
-            if (_serverOnChanges == null) _serverOnChanges = new();
-            if (_clientOnChanges == null) _clientOnChanges = new();
-#endif
+            base.Registered();
             foreach (T item in Collection)
                 _initialValues.Add(item);
         }
@@ -176,7 +146,7 @@ namespace FishNet.Object.Synchronizing
         /// <returns></returns>
         public HashSet<T> GetCollection(bool asServer)
         {
-            bool asClientAndHost = (!asServer && base.NetworkManager.IsServerStarted);
+            bool asClientAndHost = (!asServer && base.NetworkManager.IsServer);
             ISet<T> collection = (asClientAndHost) ? ClientHostCollection : Collection;
             return (collection as HashSet<T>);
         }
@@ -184,19 +154,20 @@ namespace FishNet.Object.Synchronizing
         /// <summary>
         /// Adds an operation and invokes locally.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddOperation(SyncHashSetOperation operation, T item)
         {
-            if (!base.IsInitialized)
+            if (!base.IsRegistered)
                 return;
 
-            bool asServerInvoke = (!base.IsNetworkInitialized || base.NetworkBehaviour.IsServerStarted);
+            bool asServerInvoke = (!base.IsNetworkInitialized || base.NetworkBehaviour.IsServer);
 
             if (asServerInvoke)
             {
                 _valuesChanged = true;
                 if (base.Dirty())
                 {
-                    ChangeData change = new(operation, item);
+                    ChangeData change = new ChangeData(operation, item);
                     _changed.Add(change);
                 }
             }
@@ -208,7 +179,7 @@ namespace FishNet.Object.Synchronizing
         /// Called after OnStartXXXX has occurred.
         /// </summary>
         /// <param name="asServer">True if OnStartServer was called, false if OnStartClient.</param>
-        protected internal override void OnStartCallback(bool asServer)
+        public override void OnStartCallback(bool asServer)
         {
             base.OnStartCallback(asServer);
             List<CachedOnChange> collection = (asServer) ? _serverOnChanges : _clientOnChanges;
@@ -226,7 +197,7 @@ namespace FishNet.Object.Synchronizing
         /// </summary>
         /// <param name="writer"></param>
         ///<param name="resetSyncTick">True to set the next time data may sync.</param>
-        protected internal override void WriteDelta(PooledWriter writer, bool resetSyncTick = true)
+        public override void WriteDelta(PooledWriter writer, bool resetSyncTick = true)
         {
             //If sending all then clear changed and write full.
             if (_sendAll)
@@ -238,7 +209,6 @@ namespace FishNet.Object.Synchronizing
             else
             {
                 base.WriteDelta(writer, resetSyncTick);
-
                 //False for not full write.
                 writer.WriteBoolean(false);
                 writer.WriteInt32(_changed.Count);
@@ -246,7 +216,7 @@ namespace FishNet.Object.Synchronizing
                 for (int i = 0; i < _changed.Count; i++)
                 {
                     ChangeData change = _changed[i];
-                    writer.WriteUInt8Unpacked((byte)change.Operation);
+                    writer.WriteByte((byte)change.Operation);
 
                     //Clear does not need to write anymore data so it is not included in checks.
                     if (change.Operation == SyncHashSetOperation.Add || change.Operation == SyncHashSetOperation.Remove || change.Operation == SyncHashSetOperation.Update)
@@ -263,7 +233,7 @@ namespace FishNet.Object.Synchronizing
         /// Writes all values if not initial values.
         /// </summary>
         /// <param name="writer"></param>
-        protected internal override void WriteFull(PooledWriter writer)
+        public override void WriteFull(PooledWriter writer)
         {
             if (!_valuesChanged)
                 return;
@@ -275,7 +245,7 @@ namespace FishNet.Object.Synchronizing
             writer.WriteInt32(count);
             foreach (T item in Collection)
             {
-                writer.WriteUInt8Unpacked((byte)SyncHashSetOperation.Add);
+                writer.WriteByte((byte)SyncHashSetOperation.Add);
                 writer.Write(item);
             }
         }
@@ -283,17 +253,21 @@ namespace FishNet.Object.Synchronizing
         /// <summary>
         /// Reads and sets the current values for server or client.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         [APIExclude]
-        protected internal override void Read(PooledReader reader, bool asServer)
+        public override void Read(PooledReader reader, bool asServer)
         {
-            base.SetReadArguments(reader, asServer, out bool newChangeId, out bool asClientHost, out bool canModifyValues);
-
+            /* When !asServer don't make changes if server is running.
+            * This is because changes would have already been made on
+            * the server side and doing so again would result in duplicates
+            * and potentially overwrite data not yet sent. */
+            bool asClientAndHost = (!asServer && base.NetworkManager.IsServer);
             //True to warn if this object was deinitialized on the server.
-            bool deinitialized = (asClientHost && !base.OnStartServerCalled);
+            bool deinitialized = (asClientAndHost && !base.OnStartServerCalled);
             if (deinitialized)
                 base.NetworkManager.LogWarning($"SyncType {GetType().Name} received a Read but was deinitialized on the server. Client callback values may be incorrect. This is a ClientHost limitation.");
 
-            ISet<T> collection = (asClientHost) ? ClientHostCollection : Collection;
+            ISet<T> collection = (asClientAndHost) ? ClientHostCollection : Collection;
 
             //Clear collection since it's a full write.
             bool fullWrite = reader.ReadBoolean();
@@ -303,7 +277,7 @@ namespace FishNet.Object.Synchronizing
             int changes = reader.ReadInt32();
             for (int i = 0; i < changes; i++)
             {
-                SyncHashSetOperation operation = (SyncHashSetOperation)reader.ReadUInt8Unpacked();
+                SyncHashSetOperation operation = (SyncHashSetOperation)reader.ReadByte();
                 T next = default;
 
                 //Add.
@@ -337,12 +311,11 @@ namespace FishNet.Object.Synchronizing
                     }
                 }
 
-                if (newChangeId)
-                    InvokeOnChange(operation, next, false);
+                InvokeOnChange(operation, next, false);
             }
 
             //If changes were made invoke complete after all have been read.
-            if (newChangeId && changes > 0)
+            if (changes > 0)
                 InvokeOnChange(SyncHashSetOperation.Complete, default, false);
         }
 
@@ -356,23 +329,23 @@ namespace FishNet.Object.Synchronizing
                 if (base.NetworkBehaviour.OnStartServerCalled)
                     OnChange?.Invoke(operation, item, asServer);
                 else
-                    _serverOnChanges.Add(new(operation, item));
+                    _serverOnChanges.Add(new CachedOnChange(operation, item));
             }
             else
             {
                 if (base.NetworkBehaviour.OnStartClientCalled)
                     OnChange?.Invoke(operation, item, asServer);
                 else
-                    _clientOnChanges.Add(new(operation, item));
+                    _clientOnChanges.Add(new CachedOnChange(operation, item));
             }
         }
 
         /// <summary>
         /// Resets to initialized values.
         /// </summary>
-        protected internal override void ResetState(bool asServer)
+        public override void ResetState()
         {
-            base.ResetState(asServer);
+            base.ResetState();
             _sendAll = false;
             _changed.Clear();
             Collection.Clear();
@@ -393,7 +366,6 @@ namespace FishNet.Object.Synchronizing
         {
             return Add(item, true);
         }
-
         private bool Add(T item, bool asServer)
         {
             if (!base.CanNetworkSetValues(true))
@@ -410,7 +382,6 @@ namespace FishNet.Object.Synchronizing
 
             return result;
         }
-
         /// <summary>
         /// Adds a range of values.
         /// </summary>
@@ -428,7 +399,6 @@ namespace FishNet.Object.Synchronizing
         {
             Clear(true);
         }
-
         private void Clear(bool asServer)
         {
             if (!base.CanNetworkSetValues(true))
@@ -462,7 +432,6 @@ namespace FishNet.Object.Synchronizing
         {
             return Remove(item, true);
         }
-
         private bool Remove(T item, bool asServer)
         {
             if (!base.CanNetworkSetValues(true))
@@ -485,7 +454,7 @@ namespace FishNet.Object.Synchronizing
         /// </summary>
         public void DirtyAll()
         {
-            if (!base.IsInitialized)
+            if (!base.IsRegistered)
                 return;
             if (!base.CanNetworkSetValues(true))
                 return;
@@ -501,7 +470,7 @@ namespace FishNet.Object.Synchronizing
         /// <param name="obj">Object to lookup.</param>
         public void Dirty(T obj)
         {
-            if (!base.IsInitialized)
+            if (!base.IsRegistered)
                 return;
             if (!base.CanNetworkSetValues(true))
                 return;
@@ -524,10 +493,8 @@ namespace FishNet.Object.Synchronizing
         /// </summary>
         /// <returns></returns>
         public IEnumerator GetEnumerator() => Collection.GetEnumerator();
-
         [APIExclude]
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => Collection.GetEnumerator();
-
         [APIExclude]
         IEnumerator IEnumerable.GetEnumerator() => Collection.GetEnumerator();
 
@@ -654,4 +621,3 @@ namespace FishNet.Object.Synchronizing
         }
     }
 }
-#endif

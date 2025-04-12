@@ -61,19 +61,19 @@ namespace FishNet.Example.Scened
         /// <param name="triggeringIdentity"></param>
         private void UnloadScenes(NetworkObject triggeringIdentity)
         {
-            if (!InstanceFinder.NetworkManager.IsServerStarted)
+            if (!InstanceFinder.NetworkManager.IsServer)
                 return;
 
             //NetworkObject isn't necessarily needed but to ensure its the player only run if nob is found.
             if (triggeringIdentity == null)
                 return;
 
-            UnloadOptions unloadOptions = new()
+            UnloadOptions unloadOptions = new UnloadOptions()
             {
                 Mode = (_unloadUnused) ? UnloadOptions.ServerUnloadMode.UnloadUnused : UnloadOptions.ServerUnloadMode.KeepUnused
             };
 
-            SceneUnloadData sud = new(_scenes);
+            SceneUnloadData sud = new SceneUnloadData(_scenes);
             sud.Options = unloadOptions;
 
             //Unload only for the triggering connection.

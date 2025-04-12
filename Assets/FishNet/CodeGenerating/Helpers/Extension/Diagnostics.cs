@@ -27,7 +27,7 @@ namespace FishNet.CodeGenerating.Helping
 
         internal static void AddMessage(this List<DiagnosticMessage> diagnostics, DiagnosticType diagnosticType, SequencePoint sequencePoint, string message)
         {
-            diagnostics.Add(new()
+            diagnostics.Add(new DiagnosticMessage
             {
                 DiagnosticType = diagnosticType,
                 File = sequencePoint?.Document.Url.Replace($"{Environment.CurrentDirectory}{Path.DirectorySeparatorChar}", ""),

@@ -45,7 +45,7 @@ namespace FishNet.Connection
         /// </summary>
         private void Observers_Initialize(NetworkManager nm)
         {
-            nm.TryGetInstance(out _hashGrid);
+            nm.TryGetInstance<HashGrid>(out _hashGrid);
         }
 
         /// <summary>

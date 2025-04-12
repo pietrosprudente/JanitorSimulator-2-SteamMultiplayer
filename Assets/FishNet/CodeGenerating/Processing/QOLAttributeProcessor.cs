@@ -13,6 +13,7 @@ namespace FishNet.CodeGenerating.Processing
 {
     internal class QolAttributeProcessor : CodegenBase
     {
+
         internal bool Process(TypeDefinition typeDef, bool moveStrippedCalls)
         {
             bool modified = false;
@@ -116,9 +117,6 @@ namespace FishNet.CodeGenerating.Processing
 
             //True to use InstanceFInder.
             bool useStatic = (methodDef.IsStatic || !inheritsNetworkBehaviour);
-            //Check to force using static.
-            if (!useStatic && qolAttribute.GetField("UseIsStarted", false))
-                useStatic = true;
 
             if (qolType == QolAttributeType.Client)
             {
@@ -127,7 +125,7 @@ namespace FishNet.CodeGenerating.Processing
                     LoggingType logging = qolAttribute.GetField("Logging", LoggingType.Warning);
                     /* Since isClient also uses insert first
                      * it will be put ahead of the IsOwner check, since the
-                     * codegen processes it after IsOwner. EG...
+                     * codegen processes it after IsOwner. EG... 
                      * IsOwner will be added first, then IsClient will be added first over IsOwner. */
                     bool requireOwnership = qolAttribute.GetField("RequireOwnership", false);
                     if (requireOwnership && useStatic)
@@ -163,4 +161,5 @@ namespace FishNet.CodeGenerating.Processing
 
         
     }
+
 }

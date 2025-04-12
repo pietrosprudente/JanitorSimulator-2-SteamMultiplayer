@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using FishNet.CodeGenerating;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
@@ -14,14 +13,12 @@ public class HallwayGenerator : NetworkBehaviour
     public TrashListScript trashListRef;
     public Vector3 trashBounds = new Vector3(10, 0, 10);
 
-    private int trashAmount = 2;
-    private int _trashAmount = 2;
+    public int TrashAmount { get; private set; } = 2;
     private int trashIncrement = 1;
     private Hallway1 currentHallway;
     private uint hallwaysUntilNext;
 
-    [AllowMutableSyncType]
-    public SyncList<GameObject> trashList = new();
+    [SyncObject] public readonly SyncList<GameObject> trashList = new();
 
     private uint HallwaysUntilNext
     {
@@ -42,24 +39,11 @@ public class HallwayGenerator : NetworkBehaviour
         }
     }
 
-    public int TrashAmount
+    public override void OnStartClient()
     {
-        get { return trashAmount; }
-        set
-        {
-            trashAmount = value;
-            /*
-            if (trashAmount <= 0)
-            {
-                GenerateNewHallway();
-            }*/
-        }
-    }
-
-    private void Start()
-    {
-        if (!IsServer) { this.enabled = false; return; }
         Instance = this;
+
+        if (!IsServer) return;
 
         currentHallway = hallListRef.hallways[0];
         hallwaysUntilNext = currentHallway.length;
@@ -69,14 +53,8 @@ public class HallwayGenerator : NetworkBehaviour
 
     public static void UpdateHallway()
     {
-        Instance.UpdateHallwayRPC();
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void UpdateHallwayRPC()
-    {
         Instance.TrashAmount--;
-        if (Instance.trashAmount <= 0)
+        if (Instance.TrashAmount <= 0)
         {
             Instance.GenerateNewHallway();
         }
@@ -86,29 +64,28 @@ public class HallwayGenerator : NetworkBehaviour
     public void GenerateNewHallway()
     {
         HallwaysUntilNext--;
-        print(trashAmount);
+        trashIncrement++;
+        print(TrashAmount);
 
         GameObject door = currentHallwayObj.GetComponent<Hallway>().door.gameObject;
         if (door != null)
         {
-            Despawn(door);
+            Despawn(door, DespawnType.Destroy);
         }
 
         var pos = currentHallwayObj.transform.position + hallwayOffset;
         currentHallwayObj = Instantiate(currentHallway.prefab, pos, currentHallway.prefab.transform.rotation);
         Spawn(currentHallwayObj);
 
-        _trashAmount += trashIncrement;
-        trashAmount += _trashAmount;
-        GenerateTrash(trashAmount);
+        TrashAmount += trashIncrement;
+        GenerateTrash(TrashAmount);
     }
 
-    [Server]
     public void GenerateStartHallway()
     {
         HallwaysUntilNext--;
-        trashAmount = 2;
-        GenerateTrash(trashAmount);
+        TrashAmount = 2;
+        GenerateTrash(TrashAmount);
     }
 
     [Server]

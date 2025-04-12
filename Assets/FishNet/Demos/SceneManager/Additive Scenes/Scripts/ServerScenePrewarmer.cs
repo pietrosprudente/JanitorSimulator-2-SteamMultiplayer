@@ -1,6 +1,6 @@
 ﻿using FishNet.Managing.Scened;
 using FishNet.Object;
-using GameKit.Dependencies.Utilities.Types;
+using GameKit.Utilities.Types;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -26,10 +26,10 @@ namespace FishNet.Demo.AdditiveScenes
              * disconnects or leaves the scene. */
             foreach (string item in _scenes)
             {
-                SceneLookupData lookupData = new(item);
-                SceneLoadData sld = new(lookupData)
+                SceneLookupData lookupData = new SceneLookupData(item);
+                SceneLoadData sld = new SceneLoadData(lookupData)
                 {
-                    Options = new()
+                    Options = new LoadOptions
                     {
                         AutomaticallyUnload = false
                     },

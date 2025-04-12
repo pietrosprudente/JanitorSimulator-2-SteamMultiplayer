@@ -40,14 +40,14 @@ public class ChangeTextThroughTime : MonoBehaviour
                 currentTextInt = 0; 
             else
                 changeText = false;
-            Debug.Log(currentTextString);
+            //Debug.Log(currentTextString);
         }        
         else{
             currentTextString = texts[currentTextInt];  
-            Debug.Log(currentTextString);
+            //Debug.Log(currentTextString);
             currentTextInt++;
         }         
-        Debug.Log(currentTextInt);
+        //Debug.Log(currentTextInt);
         changeText = true;
     }
 }

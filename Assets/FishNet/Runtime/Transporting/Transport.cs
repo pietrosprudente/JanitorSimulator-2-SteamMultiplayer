@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace FishNet.Transporting
 {
+
     /// <summary>
     /// Processes connection states, and data sent to and from a socket.
     /// </summary>
@@ -40,7 +41,6 @@ namespace FishNet.Transporting
         /// <param name="connectionId">Connectionid to get the address for.</param>
         /// <returns></returns>
         public abstract string GetConnectionAddress(int connectionId);
-
         /// <summary>
         /// Called when a connection state changes for the local client.
         /// </summary>
@@ -53,31 +53,26 @@ namespace FishNet.Transporting
         /// Called when a connection state changes for a remote client.
         /// </summary>
         public abstract event Action<RemoteConnectionStateArgs> OnRemoteConnectionState;
-
         /// <summary>
         /// Handles a ConnectionStateArgs for the local client.
         /// </summary>
         /// <param name="connectionStateArgs">Data being handled.</param>
         public abstract void HandleClientConnectionState(ClientConnectionStateArgs connectionStateArgs);
-
         /// <summary>
         /// Handles a ConnectionStateArgs for the local server.
         /// </summary>
         /// <param name="connectionStateArgs">Data being handled.</param>
         public abstract void HandleServerConnectionState(ServerConnectionStateArgs connectionStateArgs);
-
         /// <summary>
         /// Handles a ConnectionStateArgs for a remote client.
         /// </summary>
         /// <param name="connectionStateArgs">Data being handled.</param>
         public abstract void HandleRemoteConnectionState(RemoteConnectionStateArgs connectionStateArgs);
-
         /// <summary>
         /// Gets the current local ConnectionState.
         /// </summary>
         /// <param name="server">True if getting ConnectionState for the server.</param>
         public abstract LocalConnectionState GetConnectionState(bool server);
-
         /// <summary>
         /// Gets the current ConnectionState of a client connected to the server. Can only be called on the server.
         /// </summary>
@@ -92,7 +87,6 @@ namespace FishNet.Transporting
         /// <param name="channelId">Channel to use.</param>
         /// <param name="segment">Data to send.</param>
         public abstract void SendToServer(byte channelId, ArraySegment<byte> segment);
-
         /// <summary>
         /// Sends to a client.
         /// </summary>
@@ -107,29 +101,20 @@ namespace FishNet.Transporting
         /// Called when the client receives data.
         /// </summary>
         public abstract event Action<ClientReceivedDataArgs> OnClientReceivedData;
-
         /// <summary>
         /// Handles a ClientReceivedDataArgs.
         /// </summary>
         /// <param name="receivedDataArgs">Data being handled.</param>
         public abstract void HandleClientReceivedDataArgs(ClientReceivedDataArgs receivedDataArgs);
-
         /// <summary>
         /// Called when the server receives data.
         /// </summary>
         public abstract event Action<ServerReceivedDataArgs> OnServerReceivedData;
-
         /// <summary>
         /// Handles a ServerReceivedDataArgs.
         /// </summary>
         /// <param name="receivedDataArgs">Data being handled.</param>
         public abstract void HandleServerReceivedDataArgs(ServerReceivedDataArgs receivedDataArgs);
-
-        /// <summary>
-        /// Returns packet loss percentage. Not all transports support this feature.
-        /// </summary>
-        /// <param name="asServer">True to return packet loss on the server, false to return packet loss on the client.</param>
-        public virtual float GetPacketLoss(bool asServer) => 0f;
         #endregion
 
         #region Iterating.
@@ -138,7 +123,6 @@ namespace FishNet.Transporting
         /// </summary>
         /// <param name="server">True to process data received on the server.</param>
         public abstract void IterateIncoming(bool server);
-
         /// <summary>
         /// Processes data to be sent by the socket.
         /// </summary>
@@ -151,22 +135,19 @@ namespace FishNet.Transporting
         /// Returns if the transport is only run locally, offline.
         /// While true several security checks are disabled.
         /// </summary>
-        /// <param name="connectionid">Optional connectionId to check against.</param>
+        /// <param name="connectionid"></param>
         public virtual bool IsLocalTransport(int connectionid) => false;
-
         /// <summary>
         /// Gets how long in seconds until either the server or client socket must go without data before being timed out.
         /// </summary>
         /// <param name="asServer">True to get the timeout for the server socket, false for the client socket.</param>
         /// <returns></returns>
         public virtual float GetTimeout(bool asServer) => -1f;
-
         /// <summary>
         /// Sets how long in seconds until either the server or client socket must go without data before being timed out.
         /// </summary>
         /// <param name="asServer">True to set the timeout for the server socket, false for the client socket.</param>
         public virtual void SetTimeout(float value, bool asServer) { }
-
         /// <summary>
         /// Returns the maximum number of clients allowed to connect to the server. If the transport does not support this method the value -1 is returned.
         /// </summary>
@@ -174,10 +155,13 @@ namespace FishNet.Transporting
         public virtual int GetMaximumClients()
         {
             string message = $"The current transport does not support this feature.";
-            NetworkManager.LogWarning(message);
+            if (NetworkManager == null)
+                NetworkManager.StaticLogWarning(message);
+            else
+                NetworkManager.LogWarning(message);
+
             return -1;
         }
-
         /// <summary>
         /// Sets the maximum number of clients allowed to connect to the server. If applied at runtime and clients exceed this value existing clients will stay connected but new clients may not connect.
         /// </summary>
@@ -185,39 +169,36 @@ namespace FishNet.Transporting
         public virtual void SetMaximumClients(int value)
         {
             string message = $"The current transport does not support this feature.";
-            NetworkManager.LogWarning(message);
+            if (NetworkManager == null)
+                NetworkManager.StaticLogWarning(message);
+            else
+                NetworkManager.LogWarning(message);
         }
-
         /// <summary>
         /// Sets which address the client will connect to.
         /// </summary>
         /// <param name="address">Address client will connect to.</param>
         public virtual void SetClientAddress(string address) { }
-
         /// <summary>
         /// Returns which address the client will connect to.
         /// </summary>
         public virtual string GetClientAddress() => string.Empty;
-
         /// <summary>
         /// Sets which address the server will bind to.
         /// </summary>
         /// <param name="address">Address server will bind to.</param>
         /// <param name="addressType">Address type to set.</param>
         public virtual void SetServerBindAddress(string address, IPAddressType addressType) { }
-
         /// <summary>
         /// Gets which address the server will bind to.
         /// </summary>
         /// <param name="addressType">Address type to return.</param>
         public virtual string GetServerBindAddress(IPAddressType addressType) => string.Empty;
-
         /// <summary>
         /// Sets which port to use.
         /// </summary>
         /// <param name="port">Port to use.</param>
         public virtual void SetPort(ushort port) { }
-
         /// <summary>
         /// Gets which port to use.
         /// </summary>
@@ -230,13 +211,11 @@ namespace FishNet.Transporting
         /// </summary>
         /// <param name="server">True to start server.</param>
         public abstract bool StartConnection(bool server);
-
         /// <summary>
         /// Stops the local server or client.
         /// </summary>
         /// <param name="server">True to stop server.</param>
         public abstract bool StopConnection(bool server);
-
         /// <summary>
         /// Stops a remote client from the server, disconnecting the client.
         /// </summary>
@@ -245,7 +224,6 @@ namespace FishNet.Transporting
         /// When not using immediate disconnects it's recommended to perform disconnects using the ServerManager rather than accessing the transport directly.
         /// </param>
         public abstract bool StopConnection(int connectionId, bool immediately);
-
         /// <summary>
         /// Stops both client and server.
         /// </summary>
@@ -260,5 +238,6 @@ namespace FishNet.Transporting
         /// <returns>MTU of channel.</returns>
         public abstract int GetMTU(byte channel);
         #endregion
+
     }
 }

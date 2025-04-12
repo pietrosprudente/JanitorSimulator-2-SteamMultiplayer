@@ -1,6 +1,7 @@
 ﻿using FishNet.Object;
 using FishNet.Serializing;
 using FishNet.Transporting;
+using UnityEngine;
 
 namespace FishNet.Managing.Utility
 {
@@ -22,13 +23,10 @@ namespace FishNet.Managing.Utility
             * Reliables also need length read in the instance a client
             * sends data to an object which server is despawning. Without
             * parsing length the remainer data from client will be corrupt. */
-            /* //todo: we will not always get length on reconciles once
-             * the issue with parsed headers is resolved. */
             PacketId pid = (PacketId)packetId;
             if (channel == Channel.Reliable ||
                 pid == PacketId.Broadcast ||
-                pid == PacketId.SyncType ||
-                pid == PacketId.Reconcile
+                pid == PacketId.SyncVar
                 )
             {
                 return reader.ReadInt32();
@@ -44,10 +42,21 @@ namespace FishNet.Managing.Utility
              * for a sanity check. */
             else
             {
-                reader.NetworkManager.LogError($"Operation is unhandled for packetId {(PacketId)packetId} on channel {channel}.");
+                LogError($"Operation is unhandled for packetId {(PacketId)packetId} on channel {channel}.");
                 return (int)MissingObjectPacketLength.PurgeRemaiming;
             }
+
+            //Logs an error message.
+            void LogError(string message)
+            {
+                if (reader.NetworkManager != null)
+                    reader.NetworkManager.LogError(message);
+                else
+                    NetworkManager.StaticLogError(message);
+            }
+
         }
+
     }
 
 

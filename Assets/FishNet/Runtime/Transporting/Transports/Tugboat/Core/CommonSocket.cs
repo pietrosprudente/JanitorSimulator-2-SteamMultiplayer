@@ -35,17 +35,10 @@ namespace FishNet.Transporting.Tugboat
 
             _connectionState = connectionState;
             if (asServer)
-                Transport.HandleServerConnectionState(new(connectionState, Transport.Index));
+                Transport.HandleServerConnectionState(new ServerConnectionStateArgs(connectionState, Transport.Index));
             else
-                Transport.HandleClientConnectionState(new(connectionState, Transport.Index));
+                Transport.HandleClientConnectionState(new ClientConnectionStateArgs(connectionState, Transport.Index));
         }
-        #endregion
-        
-        #region Internal.
-        /// <summary>
-        /// NetManager for this socket.
-        /// </summary>
-        internal NetManager NetManager;
         #endregion
 
         #region Protected.
@@ -53,6 +46,10 @@ namespace FishNet.Transporting.Tugboat
         /// Transport controlling this socket.
         /// </summary>
         protected Transport Transport;
+        /// <summary>
+        /// NetManager for this socket.
+        /// </summary>
+        protected NetManager NetManager;
         #endregion
 
         /// <summary>
@@ -64,7 +61,7 @@ namespace FishNet.Transporting.Tugboat
                 return;
 
             //ConnectionId isn't used from client to server.
-            Packet outgoing = new(connectionId, segment, channelId, mtu);
+            Packet outgoing = new Packet(connectionId, segment, channelId, mtu);
             queue.Enqueue(outgoing);
         }
 
@@ -129,7 +126,7 @@ namespace FishNet.Transporting.Tugboat
             byte channel = (deliveryMethod == DeliveryMethod.Unreliable) ?
                 (byte)Channel.Unreliable : (byte)Channel.Reliable;
             //Add to packets.
-            Packet packet = new(id, data, dataLen, channel);
+            Packet packet = new Packet(id, data, dataLen, channel);
             queue.Enqueue(packet);
             //Recycle reader.
             reader.Recycle();

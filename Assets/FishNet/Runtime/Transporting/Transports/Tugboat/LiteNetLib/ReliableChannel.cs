@@ -33,7 +33,7 @@ namespace LiteNetLib
                     double packetHoldTime = currentTime - _timeStamp;
                     if (packetHoldTime < resendDelay)
                         return true;
-                    NetDebug.Write($"[RC]Resend: {packetHoldTime} > {resendDelay}");
+                    NetDebug.Write("[RC]Resend: {0} > {1}", (int)packetHoldTime, resendDelay);
                 }
                 _timeStamp = currentTime;
                 _isSent = true;
@@ -78,7 +78,7 @@ namespace LiteNetLib
             _ordered = ordered;
             _pendingPackets = new PendingPacket[_windowSize];
             for (int i = 0; i < _pendingPackets.Length; i++)
-                _pendingPackets[i] = new();
+                _pendingPackets[i] = new PendingPacket();
 
             if (_ordered)
             {
@@ -95,7 +95,7 @@ namespace LiteNetLib
             _localSeqence = 0;
             _remoteSequence = 0;
             _remoteWindowStart = 0;
-            _outgoingAcks = new(PacketProperty.Ack, (_windowSize - 1) / BitsInByte + 2) {ChannelId = id};
+            _outgoingAcks = new NetPacket(PacketProperty.Ack, (_windowSize - 1) / BitsInByte + 2) {ChannelId = id};
         }
 
         //ProcessAck in packet
@@ -148,7 +148,7 @@ namespace LiteNetLib
                         }
 
                         //Skip false ack
-                        NetDebug.Write($"[PA]False ack: {pendingSeq}");
+                        NetDebug.Write("[PA]False ack: {0}", pendingSeq);
                         continue;
                     }
 
@@ -160,7 +160,7 @@ namespace LiteNetLib
 
                     //clear packet
                     if (_pendingPackets[pendingIdx].Clear(Peer))
-                        NetDebug.Write($"[PA]Removing reliableInOrder ack: {pendingSeq} - true");
+                        NetDebug.Write("[PA]Removing reliableInOrder ack: {0} - true", pendingSeq);
                 }
             }
         }
@@ -181,20 +181,19 @@ namespace LiteNetLib
             lock (_pendingPackets)
             {
                 //get packets from queue
-                lock (OutgoingQueue)
+                while (!OutgoingQueue.IsEmpty)
                 {
-                    while (OutgoingQueue.Count > 0)
-                    {
-                        int relate = NetUtils.RelativeSequenceNumber(_localSeqence, _localWindowStart);
-                        if (relate >= _windowSize)
-                            break;
+                    int relate = NetUtils.RelativeSequenceNumber(_localSeqence, _localWindowStart);
+                    if (relate >= _windowSize)
+                        break;
 
-                        var netPacket = OutgoingQueue.Dequeue();
-                        netPacket.Sequence = (ushort) _localSeqence;
-                        netPacket.ChannelId = _id;
-                        _pendingPackets[_localSeqence % _windowSize].Init(netPacket);
-                        _localSeqence = (_localSeqence + 1) % NetConstants.MaxSequence;
-                    }
+                    if (!OutgoingQueue.TryDequeue(out var netPacket))
+                        break;
+
+                    netPacket.Sequence = (ushort) _localSeqence;
+                    netPacket.ChannelId = _id;
+                    _pendingPackets[_localSeqence % _windowSize].Init(netPacket);
+                    _localSeqence = (_localSeqence + 1) % NetConstants.MaxSequence;
                 }
 
                 //send
@@ -206,7 +205,7 @@ namespace LiteNetLib
                 }
             }
 
-            return hasPendingPackets || _mustSendAcks || OutgoingQueue.Count > 0;
+            return hasPendingPackets || _mustSendAcks || !OutgoingQueue.IsEmpty;
         }
 
         //Process incoming packet

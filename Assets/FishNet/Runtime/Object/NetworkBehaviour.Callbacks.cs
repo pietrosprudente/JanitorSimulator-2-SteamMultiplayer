@@ -1,7 +1,9 @@
-﻿using FishNet.Connection;
+﻿#if UNITY_2020_3_OR_NEWER && UNITY_EDITOR_WIN
+using FishNet.CodeAnalysis.Annotations;
+#endif
+using FishNet.Connection;
 using FishNet.Documenting;
 using FishNet.Object.Synchronizing.Internal;
-using FishNet.Serializing;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -34,24 +36,14 @@ namespace FishNet.Object
         private bool _onStopNetworkCalled;
         #endregion
 
-        /* Payloads are written and read immediatley after the header containing the target NetworkObject/Behaviour. */
-        /// <summary>
-        /// Called when writing a spawn. This may be used to deliver information for predicted spawning, or simply have values set before initialization without depending on SyncTypes.
-        /// </summary>
-        /// <param name="connection">Connection receiving the payload. When sending to the server connection.IsValid will return false.</param>
-        public virtual void WritePayload(NetworkConnection connection, Writer writer) { }
-        /// <summary>
-        /// Called before network start callbacks, but after the object is initialized with network values. This may be used to read information from predicted spawning, or simply have values set before initialization without depending on SyncTypes.
-        /// </summary>
-        /// <param name="connection">Connection sending the payload. When coming from the server connection.IsValid will return false.</param>
-        public virtual void ReadPayload(NetworkConnection connection, Reader reader) { }
-
         /// <summary>
         /// Invokes OnStartXXXX for synctypes, letting them know the NetworkBehaviour start cycle has been completed.
         /// </summary>
         internal void InvokeSyncTypeOnStartCallbacks(bool asServer)
         {
-            foreach (SyncBase item in _syncTypes.Values)
+            foreach (SyncBase item in _syncVars.Values)
+                item.OnStartCallback(asServer);
+            foreach (SyncBase item in _syncObjects.Values)
                 item.OnStartCallback(asServer);
         }
 
@@ -60,9 +52,9 @@ namespace FishNet.Object
         /// </summary>
         internal void InvokeSyncTypeOnStopCallbacks(bool asServer)
         {
-            // if (_syncTypes == null)
-            //     return;
-            foreach (SyncBase item in _syncTypes.Values)
+            foreach (SyncBase item in _syncVars.Values)
+                item.OnStopCallback(asServer);
+            foreach (SyncBase item in _syncObjects.Values)
                 item.OnStopCallback(asServer);
         }
 
@@ -70,7 +62,8 @@ namespace FishNet.Object
         /// <summary>
         /// Invokes the OnStart/StopNetwork.
         /// </summary>
-        internal void InvokeOnNetwork_Internal(bool start)
+        /// <param name="start"></param>
+        internal void InvokeOnNetwork(bool start)
         {
             if (start)
             {
@@ -86,8 +79,8 @@ namespace FishNet.Object
             }
         }
 
-        
-        internal virtual void OnStartNetwork_Internal()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void OnStartNetwork_Internal()
         {
             _onStartNetworkCalled = true;
             _onStopNetworkCalled = false;
@@ -101,12 +94,11 @@ namespace FishNet.Object
         public virtual void OnStartNetwork() { }
 
 
-        
-        internal virtual void OnStopNetwork_Internal()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void OnStopNetwork_Internal()
         {
             _onStopNetworkCalled = true;
             _onStartNetworkCalled = false;
-            
             OnStopNetwork();
         }
         /// <summary>
@@ -117,7 +109,7 @@ namespace FishNet.Object
         public virtual void OnStopNetwork() { }
 
 
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnStartServer_Internal()
         {
             OnStartServerCalled = true;
@@ -130,7 +122,7 @@ namespace FishNet.Object
         public virtual void OnStartServer() { }
 
 
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnStopServer_Internal()
         {
             OnStartServerCalled = false;
@@ -143,17 +135,20 @@ namespace FishNet.Object
         public virtual void OnStopServer() { }
 
 
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnOwnershipServer_Internal(NetworkConnection prevOwner)
         {
-            ResetState_Prediction(true);
+            //When switching ownership always clear replicate cache on server.
+            ClearReplicateCache(true);
             OnOwnershipServer(prevOwner);
         }
         /// <summary>
         /// Called on the server after ownership has changed.
         /// </summary>
         /// <param name="prevOwner">Previous owner of this object.</param>
+
         public virtual void OnOwnershipServer(NetworkConnection prevOwner) { }
+
 
         /// <summary>
         /// Called on the server after a spawn message for this object has been sent to clients.
@@ -168,7 +163,7 @@ namespace FishNet.Object
         public virtual void OnDespawnServer(NetworkConnection connection) { }
 
 
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnStartClient_Internal()
         {
             OnStartClientCalled = true;
@@ -180,7 +175,7 @@ namespace FishNet.Object
         public virtual void OnStartClient() { }
 
 
-        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnStopClient_Internal()
         {
             OnStartClientCalled = false;
@@ -191,18 +186,17 @@ namespace FishNet.Object
         /// </summary>
         public virtual void OnStopClient() { }
 
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void OnOwnershipClient_Internal(NetworkConnection prevOwner)
         {
             //If losing or gaining ownership then clear replicate cache.
             if (IsOwner || prevOwner == LocalConnection)
             {
-                ResetState_Prediction(false);
+                ClearReplicateCache(false);
             }
-
             OnOwnershipClient(prevOwner);
         }
-
         /// <summary>
         /// Called on the client after gaining or losing ownership.
         /// </summary>

@@ -9,7 +9,7 @@ namespace FishNet.Demo.AdditiveScenes
 
         private void OnTriggerEnter(Collider other)
         {
-            if (!base.IsServerStarted)
+            if (!base.IsServer)
                 return;
 
             Player player = GetPlayerOwnedObject(other);
@@ -19,13 +19,13 @@ namespace FishNet.Demo.AdditiveScenes
             /* Create a lookup handle using this objects scene.
              * This is one of many ways FishNet knows what scene to load
              * for the clients. */
-            SceneLookupData lookupData = new(gameObject.scene);
-            SceneLoadData sld = new(lookupData)
+            SceneLookupData lookupData = new SceneLookupData(gameObject.scene);
+            SceneLoadData sld = new SceneLoadData(lookupData)
             {
                 /* Set automatically unload to false
                  * so the server does not unload this scene when
                  * there are no more connections in it. */
-                Options = new()
+                Options = new LoadOptions()
                 {
                     AutomaticallyUnload = false
                 },
@@ -35,7 +35,7 @@ namespace FishNet.Demo.AdditiveScenes
                 //Load scenes as additive.
                 ReplaceScenes = ReplaceOption.None,
                 //Set the preferred active scene so the client changes active scenes.
-                PreferredActiveScene = new(lookupData),
+                PreferredActiveScene = lookupData,
             };
 
             base.SceneManager.LoadConnectionScenes(player.Owner, sld);
@@ -43,7 +43,7 @@ namespace FishNet.Demo.AdditiveScenes
 
         private void OnTriggerExit(Collider other)
         {
-            if (!base.IsServerStarted)
+            if (!base.IsServer)
                 return;
 
             Player player = GetPlayerOwnedObject(other);
@@ -53,7 +53,7 @@ namespace FishNet.Demo.AdditiveScenes
             /* Create a lookup handle using this objects scene.
              * This is one of many ways FishNet knows what scene to load
              * for the clients. */
-            SceneLookupData lookupData = new(gameObject.scene);
+            SceneLookupData lookupData = new SceneLookupData(gameObject.scene);
             /* Tell server to keep unused when unloading. This will keep
              * the scene even if there are no connections. 
              * This varies from AutomaticallyUnload slightly;
@@ -62,9 +62,9 @@ namespace FishNet.Demo.AdditiveScenes
              * were to disconnect. But when manually telling a scene to
              * unload you must tell the server to keep it even if unused,
              * if that is your preference. */
-            SceneUnloadData sud = new(lookupData)
+            SceneUnloadData sud = new SceneUnloadData(lookupData)
             {
-                Options = new()
+                Options = new UnloadOptions()
                 {
                     Mode = UnloadOptions.ServerUnloadMode.KeepUnused
                 }

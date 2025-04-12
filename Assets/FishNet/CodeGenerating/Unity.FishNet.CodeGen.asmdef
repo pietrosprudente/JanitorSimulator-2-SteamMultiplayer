@@ -1,10 +1,9 @@
 {
     "name": "Unity.FishNet.Codegen",
-    "rootNamespace": "",
     "references": [
         "FishNet.Runtime",
         "FishNet.Codegen.Cecil",
-        "GameKit.Dependencies"
+        "GameKit.Utilities"
     ],
     "includePlatforms": [
         "Editor"

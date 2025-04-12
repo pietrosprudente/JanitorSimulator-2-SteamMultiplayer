@@ -12,7 +12,7 @@ namespace FishNet.Utility.Performance
         /// <summary>
         /// Stored byte arrays.
         /// </summary>
-        private static Queue<byte[]> _byteArrays = new();
+        private static Queue<byte[]> _byteArrays = new Queue<byte[]>();
 
         /// <summary>
         /// Returns a byte array which will be of at lesat minimum length. The returned array must manually be stored.
